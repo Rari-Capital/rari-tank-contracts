@@ -1,0 +1,19 @@
+{
+  "name": "rari-money-market",
+  "version": "1.0.0",
+  "description": "Smart contracts for the Rari Money Market",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JetDeveloping/rari-money-market.git"
+  },
+  "author": "Jet Jadeja",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JetDeveloping/rari-money-market/issues"
+  },
+  "homepage": "https://github.com/JetDeveloping/rari-money-market#readme"
+}
