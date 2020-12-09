@@ -25,14 +25,14 @@ contract FundManager {
 
     ///@dev Add a supported ERC20 token to the contract
     function addSupportedCurrency(
-        string memory currencyCode,
-        address currencyAddress,
-        uint256 decimals
+        string memory _currencyCode,
+        address _currencyAddress,
+        uint256 _decimals
     ) internal {
-        currencyIndexes[currencyCode] = supportedCurrencies.length;
-        supportedCurrencies.push(currencyCode);
+        currencyIndexes[_currencyCode] = supportedCurrencies.length;
+        supportedCurrencies.push(_currencyCode);
 
-        currencyAddresses[currencyCode] = currencyAddress;
-        currencyDecimals[currencyCode] = decimals;
+        currencyAddresses[_currencyCode] = _currencyAddress;
+        currencyDecimals[_currencyCode] = _decimals;
     }
 }
