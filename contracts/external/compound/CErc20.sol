@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-interface ICErc20 {
+interface CErc20 {
   function mint(uint256) external returns (uint256);
 
   function borrow(uint256) external returns (uint256);
