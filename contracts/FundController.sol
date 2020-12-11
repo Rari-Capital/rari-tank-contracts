@@ -11,6 +11,9 @@ contract FundController {
     ///@dev The Fund Manager Smart  Contract
     address private fundManager;
 
+    ///@dev Maps the amount of each cToken this address holds
+    mapping(address => uint256) private cTokenBalances;
+
     ///@dev Ensure that the modified function can only be called by the fundManager
     modifier onlyManager() {
         require(
@@ -58,4 +61,18 @@ contract FundController {
         external
         onlyManager()
     {}
+
+    function _withdraw(address _comptroller) internal {
+        Comptroller comptroller = Comptroller(_comptroller);
+
+        (uint256 error, uint256 liquidity, uint256 shortfall) =
+            comptroller.getAccountLiquidity(address(this));
+
+        if (error != 0) {
+            revert("Comptroller: Failed to get account liquidity");
+        }
+
+        require(shortfall == 0, "Comptroller: account underwater");
+        require(liquidity > 0, "Comptroller: account has excess collateral");
+    }
 }
