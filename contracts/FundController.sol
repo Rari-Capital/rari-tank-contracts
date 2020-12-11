@@ -14,6 +14,9 @@ contract FundController {
     ///@dev Maps the amount of each cToken this address holds
     mapping(address => uint256) private cTokenBalances;
 
+    ///@dev Maps user address to the address of their deposited token
+    mapping(address => address) private usedToken;
+
     ///@dev Ensure that the modified function can only be called by the fundManager
     modifier onlyManager() {
         require(
@@ -36,6 +39,13 @@ contract FundController {
         address _cToken,
         address _comptroller
     ) internal {
+        // Ensure that the user doesn't deposit more than 1 currency
+        require(
+            usedToken[msg.sender] == address(0) ||
+                usedToken[msg.sender] == _underlyingToken,
+            "RariFundController: Token Type must match deposits"
+        );
+
         IERC20 underlyingToken = IERC20(_underlyingToken);
         CErc20 cToken = CErc20(_cToken);
         Comptroller comptroller = Comptroller(_comptroller);
