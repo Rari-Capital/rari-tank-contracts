@@ -10,4 +10,6 @@ interface CErc20 {
   function borrowBalanceCurrent(address) external returns (uint256);
 
   function repayBorrow(uint256) external returns (uint256);
+
+  function exchangeRateCurrent() external returns (uint256);
 }
