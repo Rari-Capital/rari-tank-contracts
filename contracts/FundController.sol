@@ -80,27 +80,18 @@ contract FundController {
         }
     }
 
-    function _borrowFromCompound(address _comptroller) internal {
+    function _borrowFromCompound(address _comptroller, address _priceFeed) internal view {
         Comptroller comptroller = Comptroller(_comptroller);
-
-        (uint256 error, uint256 liquidity, uint256 shortfall) =
-            comptroller.getAccountLiquidity(address(this));
-
-        if (error != 0) {
-            revert("Comptroller: Failed to get account liquidity");
-        }
-
-        require(shortfall == 0, "Comptroller: account underwater");
-        require(liquidity > 0, "Comptroller: account has excess collateral");
+        PriceFeed priceFeed = PriceFeed(_priceFeed);
     }
 
     /**
-        @dev Private function used to get total borrowAmount for a specific user
+        @dev Private function used to get the maximum borrow amount for a specific user
         @param _userAddress The address of the user
         @param _comptroller The address of the comptroller
         @param _priceFeed The address of the compound pricefeed
     */
-    function getUSDBorrowAmount(
+    function _getMaxUSDBorrowAmount(
         address _userAddress,
         address _comptroller,
         address _priceFeed
@@ -126,5 +117,16 @@ contract FundController {
 
         // Calculate and return the USD Balance Amount
         return usdBalanceMantissa.mul(collateralFactorMantissa).div(1e18);
+    }
+
+    function _getTokenBorrowAmount(
+        address _cToken,
+        address _priceFeed,
+        uint256 _usdBorrowAmount
+    ) private view returns (uint256) {
+        uint256 borrowTokenPrice = PriceFeed(_priceFeed).getUnderlyingPrice(_cToken);
+
+        // Calculate the amount of borrowToken that can be borrowed
+        return _usdBorrowAmount.div(borrowTokenPrice);
     }
 }
