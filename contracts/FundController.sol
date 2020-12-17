@@ -32,6 +32,34 @@ contract FundController {
         _;
     }
 
+    ///@dev The address of Compound's comptroller
+    address private comptroller;
+
+    ///@dev The address of Compound's pricefeed
+    address private priceFeed;
+
+    ///@dev Maps cToken addresses to their corresponding underlying token address
+    mapping(address => address) cTokenToUnderlying;
+
+    ///@dev Maps underlying token address to their corresponding cToken address
+    mapping(address => address) underlyingToCToken;
+
+    constructor(
+        address _fundManager,
+        address _comptroller,
+        address _priceFeed
+    ) public {
+        fundManager = _fundManager;
+        comptroller = _comptroller;
+        priceFeed = _priceFeed;
+    }
+
+    ///@dev Add cTokens and underlying tokens to the list of supported currencies
+    function addSupportedCurrencies(address _cToken, address _underlying) internal {
+        cTokenToUnderlying[_cToken] = _underlying;
+        underlyingToCToken[_underlying] = _cToken;
+    }
+
     function deposit(address tokenContract, address cTokenContract)
         external
         onlyManager()
