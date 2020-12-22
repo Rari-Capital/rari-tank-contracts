@@ -97,6 +97,21 @@ library CompoundPoolController {
     }
 
     /**
+        @dev Given a USD amount, calculate the maximum borrow amount with that sum
+        @param erc20Contract The address of the underlying ERC20 contract
+        @param usdAmount The USD value available
+    */
+    function getAssetBorrowAmount(address erc20Contract, uint256 usdAmount, address priceFeedContract) external view returns (uint256) {
+        PriceFeed priceFeed = PriceFeed(priceFeedContract);
+        address cErc20Contract = getCErc20Contract(erc20Contract);
+        
+        //Get the price of the underlying asset
+        uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract);
+
+        return usdAmount.mul(1e6).div(underlyingPrice);
+    }
+
+    /**
         @dev Use the exchange rate to convert from Erc20 to CErc20
         @param erc20Contract The address of the underlying ERC20 contract
         @param amount The amount of underlying tokens
