@@ -1,17 +1,18 @@
 pragma solidity ^0.5.0;
 
+import "./RariFundController.sol";
+
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/erc20/IERC20.sol";
 import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
-
-import "./RariFundController.sol";
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 /**
     @title RariFundManager
     @notice Handles deposits and withdrawals into the pool
     @author Jet Jadeja (jet@rari.capital)
 */
-contract RariFundManager is Ownable {
+contract RariFundManager is Ownable, Initializable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -42,9 +43,10 @@ contract RariFundManager is Ownable {
         _;
     }
 
-    constructor(address _rariFundControllerContract) public Ownable() {
+    function initialize(address _rariFundControllerContract) public initializer {
         addSupportedCurrency("BAT", 0x0D8775F648430679A709E98d2b0Cb6250d2887EF, 18);
         addSupportedCurrency("COMP", 0xc00e94Cb662C3520282E6f5717214004A7f26888, 18);
+        addSupportedCurrency("DAI", 0x6B175474E89094C44Da98b954EedeAC495271d0F, 6);
         addSupportedCurrency("WBTC", 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599, 8);
         addSupportedCurrency("UNI", 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984, 18);
         addSupportedCurrency("USDC", 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, 6);

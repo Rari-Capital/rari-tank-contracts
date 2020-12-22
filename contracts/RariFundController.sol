@@ -6,13 +6,14 @@ import "./libraries/CompoundPoolController.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/erc20/IERC20.sol";
 import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
+import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 /**
     @title RariFundController
     @notice Holds the funds handling deposits and withdrawals into Compound and the Rari Stable Pool 
     @author Jet Jadeja (jet@rari.capital) 
 */
-contract RariFundController is Ownable {
+contract RariFundController is Ownable, Initializable {
     using SafeERC20 for IERC20;
 
     ///@dev The address of the RariFundManager contract
@@ -24,7 +25,7 @@ contract RariFundController is Ownable {
     ///@dev Maps currencies to their corresponding tank
     mapping(address => address) private rariFundTankTokens;
 
-    constructor(address _rariFundManager) public Ownable() {
+    function initialize(address _rariFundManager) public initializer {
         rariFundManager = _rariFundManager;
     }
 
