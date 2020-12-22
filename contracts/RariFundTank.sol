@@ -5,14 +5,13 @@ import "./libraries/CompoundPoolController.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/erc20/IERC20.sol";
 import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 /**
     @title RariFundTank
     @notice Handles interaction with Compound and Rari Pools to earn yield
     @author Jet Jadeja (jet@rari.capital)
 */
-contract RariFundTank is Initializable {
+contract RariFundTank {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 

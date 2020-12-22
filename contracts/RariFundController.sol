@@ -1,7 +1,6 @@
 pragma solidity ^0.5.0;
 
 import "./RariFundTank.sol";
-import "./libraries/CompoundPoolController.sol";
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/erc20/IERC20.sol";
@@ -37,13 +36,18 @@ contract RariFundController is Ownable, Initializable {
     }
 
     /**
-        @dev Add a new tank to the contract
+        @dev Deploy a new tank and add it to the contract
         @param token The address of the token supported by the tank
-        @param tank The address of the new tank
     */
-    function newTank(address token, address tank) external onlyOwner() {
-        rariFundTanks.push(tank);
-        rariFundTankTokens[token] = tank;
+    function newTank(
+        address token,
+        address comptroller,
+        address priceFeed
+    ) external onlyOwner() {
+        //prettier-ignore
+        RariFundTank tank = new RariFundTank(token, address(this), comptroller, priceFeed);
+        rariFundTanks.push(address(tank));
+        rariFundTankTokens[token] = address(tank);
     }
 
     /**
