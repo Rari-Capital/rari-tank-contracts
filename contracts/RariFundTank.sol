@@ -13,6 +13,7 @@ import "./libraries/CompoundPoolController.sol";
 */
 contract RariFundTank {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     ///@dev The token represented by the tank
     address private supportedToken;
@@ -68,8 +69,9 @@ contract RariFundTank {
         @param amount The amount of the fund being supplied
     */
     function deposit(address account, uint256 amount) external onlyController() {
-        bytes32 key = keccak256(abi.encode(account, dataVersionNumber));
+        IERC20(supportedToken).safeTransferFrom(account, address(this), amount);
 
+        bytes32 key = keccak256(abi.encode(account, dataVersionNumber));
         if (unusedDepositBalances[key] == 0) unusedDeposits.push(account);
         unusedDepositBalances[key] += amount;
         totalUnusedBalance += amount;
