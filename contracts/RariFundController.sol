@@ -57,5 +57,6 @@ contract RariFundController is Ownable {
 
         require(tank != address(0), "RariFundController: Incompatible Token");
         IERC20(token).safeTransferFrom(account, tank, amount);
+        RariFundTank(tank).deposit(account, amount);
     }
 }
