@@ -4,3 +4,5 @@
 /.prettierignore
 /.editorconfig
 /contracts/base
+/coverage
+/coverage.json
