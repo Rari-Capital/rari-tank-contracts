@@ -3,7 +3,6 @@ const contracts = require("./helpers/contracts").contracts;
 
 const RariFundManager = artifacts.require("RariFundManager");
 const RariFundController = artifacts.require("RariFundController");
-const RariFundTank = artifacts.require("RariFundTank");
 const CompoundPoolController = artifacts.require("CompoundPoolController");
 
 module.exports = async (deployer, network, accounts) => {
