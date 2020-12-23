@@ -18,7 +18,9 @@
   "homepage": "https://github.com/JetDeveloping/rari-money-market#readme",
   "dependencies": {
     "@openzeppelin/contracts": "^2.5.1",
-    "@openzeppelin/upgrades": "^2.8.0"
+    "@openzeppelin/upgrades": "^2.8.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1"
   },
   "devDependencies": {
     "prettier-plugin-solidity": "^1.0.0-beta.1"
