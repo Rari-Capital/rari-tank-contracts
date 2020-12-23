@@ -51,6 +51,8 @@ contract RariFundTank {
         priceFeed = _priceFeed;
     }
 
+    event Deposit(address account, uint256 amount);
+
     ///@dev An array of addresses whose funds have yet to be converted to cTokens
     address[] private unusedDeposits;
 
@@ -75,7 +77,11 @@ contract RariFundTank {
         if (unusedDepositBalances[key] == 0) unusedDeposits.push(account);
         unusedDepositBalances[key] += amount;
         totalUnusedBalance += amount;
+
+        emit Deposit(account, amount);
     }
+
+    event UnusedDeposited(uint256 blockNum);
 
     /**
         @dev Deposit unused funds to Compound, borrow funds and deposit them into Rari's Stable Pool
@@ -118,5 +124,7 @@ contract RariFundTank {
         delete unusedDeposits;
         delete totalUnusedBalance;
         dataVersionNumber++;
+
+        emit UnusedDeposited(block.number);
     }
 }
