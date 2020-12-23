@@ -1,9 +1,8 @@
 /**
- * The following tests are used to ensure that the contracts can deposit into Compound + Rari
+ * The following tests are based around the user experience (deposits, withdrawals) on the highest level
  * Contracts used: RariFundManager, RariFundController, RariFundTank
  */
 
-const { BN, ether, balance } = require("@openzeppelin/test-helpers");
 const chai = require("chai");
 const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
@@ -18,39 +17,21 @@ const erc20Contracts = tokens.map(
   (token) => new web3.eth.Contract(ERC20ABI, token)
 );
 
-contract("RariFundManager", (accounts) => {
+contract("RariFundManager, RariFundController", async (accounts) => {
   const [owner, user] = accounts;
   const [token] = tokens;
   const [tokenContract] = erc20Contracts;
 
-  console.log(tokenContract);
-
   tokenContract.methods
     .transfer(user, 10000)
     .send({ from: "0x66c57bf505a85a74609d2c83e94aabb26d691e1f" });
-
-  balance
-    .current("0x66c57bf505a85a74609d2c83e94aabb26d691e1f")
-    .then((cash) => console.log(cash.toString()));
 
   beforeEach(async () => {
     // Ran before every test
     rariFundManager = await RariFundManager.deployed();
     rariFundController = await RariFundController.deployed();
 
-    rariFundManager.getRariFundController().then((addr) => console.log(addr));
-  });
-
-  it("Allows owner to set new RariFundController", async () => {
-    await rariFundManager
-      .setRariFundController(RariFundController.address, { from: owner })
-      .should.not.be.rejectedWith("revert");
-  });
-
-  it("Reverts if RariFundController setter isn't an owner", async () => {
-    await rariFundManager
-      .setRariFundController(RariFundController.address, { from: user })
-      .should.be.rejectedWith("revert");
+    tank = await rariFundController.getTank(token);
   });
 
   it("Reverts if currency is not supported", async () => {
@@ -58,10 +39,13 @@ contract("RariFundManager", (accounts) => {
       .deposit(owner, 10000)
       .should.be.rejectedWith("revert");
   });
+
   it("Sends funds to the RariFundTank", async () => {
+    await tokenContract.methods.approve(tank, 10000).send({ from: user });
+
     await rariFundManager.deposit("DAI", 10000, {
-      from: owner,
+      from: user,
     });
-    await tokenContract.methods.balanceOf(rariFundController.getTank(token));
+    await tokenContract.methods.balanceOf(tank);
   });
 });
