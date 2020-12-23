@@ -35,6 +35,8 @@ contract RariFundController is Ownable, Initializable {
         _;
     }
 
+    event NewTankSet(address token, address tank);
+
     /**
         @dev Deploy a new tank and add it to the contract
         @param token The address of the token supported by the tank
@@ -48,19 +50,35 @@ contract RariFundController is Ownable, Initializable {
         RariFundTank tank = new RariFundTank(token, address(this), comptroller, priceFeed);
         rariFundTanks.push(address(tank));
         rariFundTankTokens[token] = address(tank);
+
+        emit NewTankSet(token, address(tank));
     }
+
+    event Deposit(address token, address account, uint256 amount);
 
     /**
         @dev Deposit tokens into one of the RariFundTanks
+        @param token The address of the token
+        @param account The address depositing
+        @param amount The amount being deposited
     */
     function deposit(
         address token,
         address account,
         uint256 amount
     ) external onlyFundManager() {
-        address tank = rariFundTankTokens[token];
+        emit Deposit(token, account, amount);
 
+        address tank = rariFundTankTokens[token];
         require(tank != address(0), "RariFundController: Incompatible Token");
         RariFundTank(tank).deposit(account, amount);
+    }
+
+    /**
+        @dev Given the address of an ERC20 token, get the address of it's corresponding tank
+        @param token The address of the token
+    */
+    function getTank(address token) external view returns (address) {
+        return rariFundTankTokens[token];
     }
 }

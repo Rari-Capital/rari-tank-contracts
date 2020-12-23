@@ -74,12 +74,35 @@ contract RariFundManager is Ownable, Initializable {
         currencyDecimals[currencyCode] = decimals;
     }
 
+    event FundControllerSet(address newContract);
+
+    /**
+        @dev Set a new RariFundController contract address
+        @param _rariFundControllerContract The address of the new RariFundController
+    */
+    function setRariFundController(address _rariFundControllerContract)
+        external
+        onlyOwner
+    {
+        rariFundControllerContract = _rariFundControllerContract;
+        rariFundController = RariFundController(_rariFundControllerContract);
+        emit FundControllerSet(_rariFundControllerContract);
+    }
+
+    function getRariFundController() external view returns (address) {
+        return rariFundControllerContract;
+    }
+
+    event Deposit(string currencyCode, address account, uint256 amount);
+
     /**
         @dev Deposit funds into the contract and send them to the FundController
         @param currencyCode The currency code of the asset 
         @param amount The amount of the asset to be deposited
     */
     function deposit(string calldata currencyCode, uint256 amount) external {
+        emit Deposit(currencyCode, msg.sender, amount);
+
         address erc20TokenContract = currencyAddresses[currencyCode];
         //prettier-ignore
         require(erc20TokenContract != address(0), "RariFundManager: Invalid Currency Code");
