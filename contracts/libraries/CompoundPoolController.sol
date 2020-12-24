@@ -120,6 +120,13 @@ library CompoundPoolController {
         return amount.mul(1e18).div(CErc20(erc20Contract).exchangeRateCurrent());
     }
 
+    function getFundData(address erc20Contract) external returns (uint256, uint256){
+        address cErc20Contract = getCErc20Contract(erc20Contract);
+        CErc20 cToken = CErc20(cErc20Contract);
+
+        return(cToken.balanceOfUnderlying(address(this)), cToken.borrowBalanceCurrent(address(this)));
+    }
+
     /**
         @dev Returns a token's cToken contract address given its ERC20 contract address.
         @param erc20Contract The ERC20 contract address of the token

@@ -21,17 +21,35 @@ contract RariFundController is Ownable, Initializable {
     ///@dev An array of RariFundTank addresses
     address[] private rariFundTanks;
 
+    ///@dev The address of the FundRebalancer
+    address private fundRebalancer;
+
+    ///@dev The address of the asset to be borrowed
+    address private borrowedAsset;
+
     ///@dev Maps currencies to their corresponding tank
     mapping(address => address) private rariFundTankTokens;
 
-    function initialize(address _rariFundManager) public initializer {
+    function initialize(
+        address _rariFundManager,
+        address _fundRebalancer,
+        address _borrowedAsset
+    ) public initializer {
         rariFundManager = _rariFundManager;
+        fundRebalancer = _fundRebalancer;
+        borrowedAsset = _borrowedAsset;
     }
 
     ///@dev Ensures that a function can only be called from the RariFundController
     modifier onlyFundManager() {
         //prettier-ignore
         require(msg.sender == rariFundManager, "RariFundController: Function must be called by the Fund Manager");
+        _;
+    }
+
+    ///@dev Ensures that a function can only be called from the RariFundController
+    modifier onlyFundRebalancer() {
+        require(msg.sender == fundRebalancer);
         _;
     }
 
@@ -75,10 +93,27 @@ contract RariFundController is Ownable, Initializable {
     }
 
     /**
+        @dev Deposit all of the unused funds and balance the collateral:borrow ratio to 2:1
+    */
+    function rebalance() external onlyFundRebalancer() {
+        for (uint256 i = 0; i < rariFundTanks.length; i++) {
+            RariFundTank tank = RariFundTank(rariFundTanks[i]);
+
+            if (tank.totalUnusedBalance() > uint256(0)) {
+                tank.depositUnusedFunds(borrowedAsset);
+            }
+        }
+    }
+
+    /**
         @dev Given the address of an ERC20 token, get the address of it's corresponding tank
         @param token The address of the token
     */
     function getTank(address token) external view returns (address) {
         return rariFundTankTokens[token];
+    }
+
+    function getTankCompoundFundData(address token) external returns (uint256, uint256) {
+        return RariFundTank(rariFundTankTokens[token]).getCompoundFundData();
     }
 }

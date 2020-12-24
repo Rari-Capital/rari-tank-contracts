@@ -63,7 +63,7 @@ contract RariFundTank {
     mapping(bytes32 => uint256) private unusedDepositBalances;
 
     ///@dev The total unused token balance
-    uint256 private totalUnusedBalance;
+    uint256 public totalUnusedBalance;
 
     /**
         @dev Deposit funds into the tank
@@ -81,7 +81,7 @@ contract RariFundTank {
         emit Deposit(account, amount);
     }
 
-    event UnusedDeposited(uint256 blockNum);
+    event UnusedFundsDeposited(uint256 blockNum);
 
     /**
         @dev Deposit unused funds to Compound, borrow funds and deposit them into Rari's Stable Pool
@@ -125,6 +125,10 @@ contract RariFundTank {
         delete totalUnusedBalance;
         dataVersionNumber++;
 
-        emit UnusedDeposited(block.number);
+        emit UnusedFundsDeposited(block.number);
+    }
+
+    function getCompoundFundData() external returns (uint256, uint256) {
+        return CompoundPoolController.getFundData(supportedToken);
     }
 }
