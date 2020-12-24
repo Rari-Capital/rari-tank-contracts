@@ -127,8 +127,4 @@ contract RariFundTank {
 
         emit UnusedFundsDeposited(block.number);
     }
-
-    function getCompoundFundData() external returns (uint256, uint256) {
-        return CompoundPoolController.getFundData(supportedToken);
-    }
 }

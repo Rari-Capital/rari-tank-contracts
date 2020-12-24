@@ -5,14 +5,13 @@ import "./RariFundController.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/erc20/IERC20.sol";
 import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 
 /**
     @title RariFundManager
     @notice Handles deposits and withdrawals into the pool
     @author Jet Jadeja (jet@rari.capital)
 */
-contract RariFundManager is Ownable, Initializable {
+contract RariFundManager is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -43,7 +42,7 @@ contract RariFundManager is Ownable, Initializable {
         _;
     }
 
-    function initialize(address _rariFundControllerContract) public initializer {
+    constructor() public Ownable() {
         addSupportedCurrency("BAT", 0x0D8775F648430679A709E98d2b0Cb6250d2887EF, 18);
         addSupportedCurrency("COMP", 0xc00e94Cb662C3520282E6f5717214004A7f26888, 18);
         addSupportedCurrency("DAI", 0x6B175474E89094C44Da98b954EedeAC495271d0F, 6);
@@ -52,7 +51,16 @@ contract RariFundManager is Ownable, Initializable {
         addSupportedCurrency("USDC", 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, 6);
         addSupportedCurrency("USDT", 0xdAC17F958D2ee523a2206206994597C13D831ec7, 6);
         addSupportedCurrency("ZRX", 0xE41d2489571d322189246DaFA5ebDe1F4699F498, 18);
+    }
 
+    /**
+        @dev Set a new RariFundController
+        @param _rariFundControllerContract The address of the new RariFundController
+    */
+    function setRariFundController(address _rariFundControllerContract)
+        external
+        onlyOwner
+    {
         rariFundControllerContract = _rariFundControllerContract;
         rariFundController = RariFundController(_rariFundControllerContract);
     }
@@ -72,21 +80,6 @@ contract RariFundManager is Ownable, Initializable {
         supportedCurrencies.push(currencyCode);
         currencyAddresses[currencyCode] = currencyAddress;
         currencyDecimals[currencyCode] = decimals;
-    }
-
-    event FundControllerSet(address newContract);
-
-    /**
-        @dev Set a new RariFundController contract address
-        @param _rariFundControllerContract The address of the new RariFundController
-    */
-    function setRariFundController(address _rariFundControllerContract)
-        external
-        onlyOwner
-    {
-        rariFundControllerContract = _rariFundControllerContract;
-        rariFundController = RariFundController(_rariFundControllerContract);
-        emit FundControllerSet(_rariFundControllerContract);
     }
 
     function getRariFundController() external view returns (address) {

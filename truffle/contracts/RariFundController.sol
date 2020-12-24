@@ -25,19 +25,14 @@ contract RariFundController is Ownable, Initializable {
     address private fundRebalancer;
 
     ///@dev The address of the asset to be borrowed
-    address private borrowedAsset;
+    address private borrowedAsset = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     ///@dev Maps currencies to their corresponding tank
     mapping(address => address) private rariFundTankTokens;
 
-    function initialize(
-        address _rariFundManager,
-        address _fundRebalancer,
-        address _borrowedAsset
-    ) public initializer {
+    constructor(address _rariFundManager, address _fundRebalancer) public {
         rariFundManager = _rariFundManager;
         fundRebalancer = _fundRebalancer;
-        borrowedAsset = _borrowedAsset;
     }
 
     ///@dev Ensures that a function can only be called from the RariFundController
@@ -111,9 +106,5 @@ contract RariFundController is Ownable, Initializable {
     */
     function getTank(address token) external view returns (address) {
         return rariFundTankTokens[token];
-    }
-
-    function getTankCompoundFundData(address token) external returns (uint256, uint256) {
-        return RariFundTank(rariFundTankTokens[token]).getCompoundFundData();
     }
 }

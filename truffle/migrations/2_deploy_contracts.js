@@ -8,12 +8,8 @@ const CompoundPoolController = artifacts.require("CompoundPoolController");
 module.exports = async (deployer, network, accounts) => {
   const [owner, rebalancer] = accounts;
 
-  //Address with the least slippage in the Rari Stable Pool
-  const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-
-  //Deploy the RariFundManager and RariFundController
-  await deployer.link(CompoundPoolController, RariFundController);
   await deployer.deploy(RariFundManager, { from: owner }).then(async () => {
+    await deployer.link(CompoundPoolController, RariFundController);
     await deployer
       .deploy(RariFundController, { from: owner })
       .then(async () => {
@@ -38,3 +34,17 @@ module.exports = async (deployer, network, accounts) => {
       });
   });
 };
+
+// module.exports = async (deployer, _, accounts) => {
+//   const [owner, rebalancer] = accounts;
+
+//   //deployer.link(CompoundPoolController, RariFundController);
+
+//   deployer.then(async () => {
+//     await deployer.deploy(RariFundManager);
+//     await deployer.deploy(RariFundController, RariFundManager.address);
+
+//     const rariFundManager = await RariFundManager.deployed();
+//     rariFundManager.setRariFundController(RariFundController.address);
+//   });
+// };
