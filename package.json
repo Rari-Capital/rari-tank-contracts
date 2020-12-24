@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.10",
+    "chai-bn-equal": "^1.0.0",
     "prettier-plugin-solidity": "^1.0.0-beta.1",
     "solidity-coverage": "^0.7.13"
   }
