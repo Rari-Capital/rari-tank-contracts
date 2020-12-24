@@ -4,7 +4,10 @@
  */
 
 const chai = require("chai");
+const chaiBnEqual = require("chai-bn-equal");
 const chaiAsPromised = require("chai-as-promised");
+
+chai.use(chaiBnEqual);
 chai.use(chaiAsPromised);
 chai.should();
 
@@ -18,16 +21,17 @@ const erc20Contracts = tokens.map(
 );
 
 contract("RariFundManager, RariFundController", async (accounts) => {
-  const [owner, user] = accounts;
+  const [owner, , user] = accounts;
   const [token] = tokens;
   const [tokenContract] = erc20Contracts;
 
-  tokenContract.methods
-    .transfer(user, 10000)
-    .send({ from: "0x66c57bf505a85a74609d2c83e94aabb26d691e1f" });
+  before(async () => {
+    // Ran before tests
 
-  beforeEach(async () => {
-    // Ran before every test
+    await tokenContract.methods
+      .transfer(user, 10000)
+      .send({ from: "0x66c57bf505a85a74609d2c83e94aabb26d691e1f" });
+
     rariFundManager = await RariFundManager.deployed();
     rariFundController = await RariFundController.deployed();
 
@@ -46,6 +50,9 @@ contract("RariFundManager, RariFundController", async (accounts) => {
     await rariFundManager.deposit("DAI", 10000, {
       from: user,
     });
-    await tokenContract.methods.balanceOf(tank);
+    await tokenContract.methods
+      .balanceOf(tank)
+      .call()
+      .should.eventually.bnEqual(10000);
   });
 });
