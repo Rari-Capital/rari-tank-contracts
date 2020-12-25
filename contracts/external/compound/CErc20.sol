@@ -1,5 +1,9 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.7.0;
 
+/**
+    @title Compound's CErc20 Contract
+    @author Compound
+ */
 interface CErc20 {
     function mint(uint256) external returns (uint256);
 

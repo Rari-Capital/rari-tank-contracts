@@ -1,5 +1,9 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.7.0;
 
+/**
+    @title Compound's Comptroller Contract
+    @author Compound
+ */
 interface Comptroller {
     function markets(address) external returns (bool, uint256);
 
