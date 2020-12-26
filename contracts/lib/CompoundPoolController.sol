@@ -2,11 +2,11 @@ pragma solidity ^0.7.0;
 
 import "../external/compound/CErc20.sol";
 import "../external/compound/Comptroller.sol";
-import "../external/compound/Pricefeed.sol";
+import "../external/compound/PriceFeed.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/erc20/IERC20.sol";
-import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 /**
     @title CompoundPoolController
