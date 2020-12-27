@@ -11,9 +11,11 @@ async function deploy() {
 
   //prettier-ignore
   const rariFundController = await RariFundController.deploy(rariFundManager.address);
-  await rariFundController.deployed;
+  await rariFundController.deployed();
 
-  rariFundManager.setRariFundController(RariFundController.address);
+  rariFundManager.setRariFundController(rariFundController.address);
+
+  console.log(rariFundManager.address);
 }
 
 deploy()
