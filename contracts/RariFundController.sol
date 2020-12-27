@@ -24,9 +24,22 @@ contract RariFundController is Ownable {
     ///@dev Maps currency to tank address
     mapping(address => address) rariFundTankTokens;
 
-    constructor(address _rariFundManager, address _fundRebalancer) {
+    ///@dev Compound's Comptroller Contract
+    address private comptroller;
+
+    ///@dev Compound's Pricefeed program
+    address private priceFeed;
+
+    constructor(
+        address _rariFundManager, 
+        address _fundRebalancer, 
+        address _comptroller, 
+        address _priceFeed
+    ) {
         rariFundManager = _rariFundManager;
         fundRebalancer = _fundRebalancer;
+        comptroller = _comptroller;
+        priceFeed = _priceFeed;
     }
 
     modifier onlyRariFundManager() {
@@ -50,7 +63,7 @@ contract RariFundController is Ownable {
         @param erc20Contract The address of the ERC20 token to be supported by the tank
     */
     function newTank(address erc20Contract) external onlyOwner() {
-        RariFundTank tank = new RariFundTank(erc20Contract, address(0), address(0));
+        RariFundTank tank = new RariFundTank(erc20Contract, comptroller, priceFeed);
         rariFundTanks.push(address(tank));
         rariFundTankTokens[erc20Contract] = address(tank);
     }
