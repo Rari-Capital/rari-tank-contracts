@@ -45,8 +45,6 @@ contract RariFundTank is Ownable {
     uint256 public totalUnusedBalance;
 
     function deposit(address account, uint256 amount) external onlyOwner() {
-        IERC20(erc20Contract).safeTransferFrom(account, address(this), amount);
-
         bytes32 key = keccak256(abi.encode(account, dataVersionNumber));
         if (unusedDepositBalances[key] == 0) unusedDeposits.push(account);
         unusedDepositBalances[key] += amount;
