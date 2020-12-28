@@ -96,4 +96,18 @@ contract RariFundController is Ownable {
         IERC20(erc20Contract).safeTransferFrom(account, tankContract, amount);
         RariFundTank(tankContract).deposit(account, amount);
     }
+
+    /**
+        @dev Deposit the tanks' unused funds into Compound
+        @param erc20Contract The address of the erc20Contract to be borrowed by the 
+    */
+    function handleUnusedFunds(address erc20Contract) external onlyFundRebalancer() {
+        for (uint256 i = 0; i < rariFundTanks.length; i++) {
+            RariFundTank tank = RariFundTank(rariFundTanks[i]);
+
+            if (tank.totalUnusedBalance() > uint256(0)) {
+                tank.depositFunds(erc20Contract);
+            }
+        }
+    }
 }
