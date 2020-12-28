@@ -12,6 +12,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
     @author Jet Jadeja (jet@rari.capital)
 */
 contract RariFundController is Ownable {
+    using SafeERC20 for IERC20;
+
     ///@dev The address of the RariFundManager
     address private rariFundManager;
 
@@ -31,9 +33,9 @@ contract RariFundController is Ownable {
     address private priceFeed;
 
     constructor(
-        address _rariFundManager, 
-        address _fundRebalancer, 
-        address _comptroller, 
+        address _rariFundManager,
+        address _fundRebalancer,
+        address _comptroller,
         address _priceFeed
     ) {
         rariFundManager = _rariFundManager;
@@ -89,7 +91,9 @@ contract RariFundController is Ownable {
         address account,
         uint256 amount
     ) external onlyRariFundManager() {
-        RariFundTank tank = RariFundTank(rariFundTankTokens[erc20Contract]);
-        tank.deposit(account, amount);
+        address tankContract = rariFundTankTokens[erc20Contract];
+
+        IERC20(erc20Contract).safeTransferFrom(account, tankContract, amount);
+        RariFundTank(tankContract).deposit(account, amount);
     }
 }
