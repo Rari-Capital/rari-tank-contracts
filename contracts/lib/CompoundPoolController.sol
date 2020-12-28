@@ -26,7 +26,7 @@ library CompoundPoolController {
         address underlying,
         uint256 amount,
         address comptrollerContract
-    ) external {
+    ) internal {
         require(amount > 0, "CompoundPoolController: Amount must be greater than 0");
 
         address cErc20Contract = getCErc20Contract(underlying);
@@ -53,7 +53,7 @@ library CompoundPoolController {
         @param underlying The address of the underlying asset
         @param amount The amount to be borrowed
     */
-    function borrow(address underlying, uint256 amount) external {
+    function borrow(address underlying, uint256 amount) internal {
         require(amount > 0, "CompoundPoolController: Amount must be greater than 0");
 
         //Borrow Tokens
@@ -72,7 +72,7 @@ library CompoundPoolController {
         uint256 amount,
         address comptrollerContract,
         address priceFeedContract
-    ) external returns (uint256) {
+    ) internal returns (uint256) {
         address cErc20Contract = getCErc20Contract(underlying);
         CErc20 cToken = CErc20(cErc20Contract);
         Comptroller comptroller = Comptroller(comptrollerContract);
@@ -103,7 +103,7 @@ library CompoundPoolController {
         address underlying,
         uint256 usdAmount,
         address priceFeedContract
-    ) external view returns (uint256) {
+    ) internal view returns (uint256) {
         address cErc20Contract = getCErc20Contract(underlying);
         PriceFeed priceFeed = PriceFeed(priceFeedContract);
 
@@ -118,7 +118,7 @@ library CompoundPoolController {
         @param erc20Contract The address of the underlying ERC20 contract
         @param amount The amount of underlying tokens
      */
-    function getUnderlyingToCTokens(address erc20Contract, uint256 amount) external returns (uint256) {
+    function getUnderlyingToCTokens(address erc20Contract, uint256 amount) internal returns (uint256) {
         return amount.mul(1e18).div(CErc20(erc20Contract).exchangeRateCurrent());
     }
 
