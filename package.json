@@ -23,6 +23,7 @@
     "@types/mocha": "^8.2.0",
     "@types/node": "^14.14.16",
     "chai": "^4.2.0",
+    "chai-bn-equal": "^1.0.0",
     "ethereum-waffle": "^3.2.1",
     "ethers": "^5.0.24",
     "hardhat": "^2.0.6",
