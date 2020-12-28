@@ -110,4 +110,11 @@ contract RariFundController is Ownable {
             }
         }
     }
+
+    /**
+        @dev Get the total amount of tokens locked in the contract
+    */
+    function getTotalTokensLocked(address erc20Contract) external view returns (uint256) {
+        return IERC20(erc20Contract).balanceOf(rariFundTankTokens[erc20Contract]);
+    }
 }
