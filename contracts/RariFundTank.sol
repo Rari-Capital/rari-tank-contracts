@@ -38,7 +38,7 @@ contract RariFundTank is Ownable {
     uint256 private dataVersionNumber;
 
     ///@dev Maps addresses to the amount of unused funds they have deposited
-    mapping(bytes32 => uint256) private unusedDepositBalances;
+    mapping(uint256 => mapping(address => uint256)) private unusedDepositBalances;
 
     ///@dev The total unused token balance
     uint256 public totalUnusedBalance;
@@ -50,8 +50,9 @@ contract RariFundTank is Ownable {
     */
     function deposit(address account, uint256 amount) external onlyOwner() {
         bytes32 key = keccak256(abi.encode(account, dataVersionNumber));
-        if (unusedDepositBalances[key] == 0) unusedDeposits.push(account);
-        unusedDepositBalances[key] += amount;
+        //prettier-ignore
+        if (unusedDepositBalances[dataVersionNumber][account] == 0) unusedDeposits.push(account);
+        unusedDepositBalances[dataVersionNumber][account] += amount;
         totalUnusedBalance += amount;
     }
 
@@ -63,8 +64,9 @@ contract RariFundTank is Ownable {
         // Calculate the cToken balance for each user
         for (uint256 i = 0; i < unusedDeposits.length; i++) {
             address account = unusedDeposits[i];
+
             //prettier-ignore
-            uint256 deposited = unusedDepositBalances[keccak256(abi.encode(account, dataVersionNumber))];
+            uint256 deposited = unusedDepositBalances[dataVersionNumber][account];
             cTokenBalances[account] += supportedToken.getUnderlyingToCTokens(deposited);
         }
         // Deposit the total unused balance into Compound
@@ -84,5 +86,8 @@ contract RariFundTank is Ownable {
 
         // Borrow half the borrow amount
         erc20Contract.borrow(borrowAmount.div(2));
+
+        delete unusedDeposits;
+        dataVersionNumber++;
     }
 }
