@@ -50,7 +50,6 @@ async function deploy() {
     contracts.priceFeed
   );
   await rariFundController.deployed();
-
   await rariFundManager.setRariFundController(rariFundController.address);
 
   for (let i = 0; i < tokens.length; i++) {
@@ -68,13 +67,13 @@ describe("RariFundController, RariFundTanks", async () => {
   describe("Unused Funds", async () => {
     it("Supplies assets to Compound and mints cTokens", async () => {
       const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
-      const cTokenContract = await hre.ethers.getContractAt(cerc20Abi, token);
-
+      //const cTokenContract = await hre.ethers.getContractAt(cerc20Abi, token);
+      const depositAmount = "1000000000000000000000";
       await tokenContract
         .connect(user)
-        .approve(rariFundController.address, 100);
+        .approve(rariFundController.address, depositAmount);
 
-      await rariFundManager.connect(user).deposit("DAI", 100);
+      await rariFundManager.connect(user).deposit("DAI", depositAmount);
       await rariFundController.connect(rebalancer).handleUnusedFunds(borrowing);
     });
 

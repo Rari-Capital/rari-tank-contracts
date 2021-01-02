@@ -5,6 +5,8 @@ const ethers = hre.ethers;
 const waffle = hre.waffle;
 const provider = waffle.provider;
 
+const BigNumber = require("bn.js");
+
 const chaiBnEqual = require("chai-bn-equal");
 const chaiAsPromised = require("chai-as-promised");
 
@@ -70,14 +72,27 @@ describe("RariFundManager", async () => {
 
   it("Sends funds to the RariFundTank", async () => {
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
+    const depositNumber = "1000000000000000000000";
 
-    await tokenContract.connect(user).approve(rariFundController.address, 1000);
+    await tokenContract
+      .connect(user)
+      .approve(rariFundController.address, depositNumber);
 
-    await tokenContract.connect(user).approve(rariFundController.address, 100);
-    await rariFundManager.connect(user).deposit("DAI", 10);
-
+    await rariFundManager.connect(user).deposit("DAI", depositNumber);
     await rariFundController
       .getTotalTokensLocked(token)
-      .should.eventually.bnEqual(10);
+      .should.eventually.bnEqual(depositNumber);
+  });
+
+  it("Reverts if deposit amount is too low", async () => {
+    // Note that DAI, which is being used in this example is pegged to 1 USD
+    const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
+    const depositNumber = "100";
+
+    await tokenContract.approve(rariFundController.address, depositNumber);
+    await rariFundManager
+      .connect(user)
+      .deposit("DAI", depositNumber)
+      .should.be.rejectedWith("revert");
   });
 });

@@ -49,6 +49,11 @@ contract RariFundTank is Ownable {
         @param amount The amount being deposited
     */
     function deposit(address account, uint256 amount) external onlyOwner() {
+        require(
+            supportedToken.getPrice(amount, priceFeed) >= 500,
+            "RariFundTank: Deposit amount must be over 500 dollars"
+        );
+
         bytes32 key = keccak256(abi.encode(account, dataVersionNumber));
         //prettier-ignore
         if (unusedDepositBalances[dataVersionNumber][account] == 0) unusedDeposits.push(account);

@@ -1,5 +1,7 @@
 pragma solidity ^0.7.0;
 
+import "hardhat/console.sol";
+
 import "../external/compound/CErc20.sol";
 import "../external/compound/Comptroller.sol";
 import "../external/compound/PriceFeed.sol";
@@ -125,6 +127,19 @@ library CompoundPoolController {
 
         return amount.mul(10**getERC20Decimals(underlying)).div(oneCTokenInUnderlying);
     }
+
+    /**
+        @dev Use the exchange rate to calculate the USD price of x tokens
+        @param underlying The address of the underlying ERC20 contract
+        @param amount The amount of underlying tokens
+        @param priceFeedContract The address of Compound's PriceFeed
+    */
+    function getPrice(address underlying, uint256 amount, address priceFeedContract) internal view returns (uint256) {
+        uint256 price = PriceFeed(priceFeedContract).getUnderlyingPrice(getCErc20Contract(underlying));
+        return price.mul(amount).div(1e18);
+    }
+
+
 
     /**
         @dev Returns a token's cToken contract address given its ERC20 contract address.
