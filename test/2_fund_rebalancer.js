@@ -7,11 +7,17 @@ chai.use(chaiBnEqual);
 chai.use(chaiAsPromised);
 chai.should();
 
-const token = require("./helpers/token");
+const tokenAddresses = require("./helpers/token");
+
+const token = tokenAddresses.underlying;
+const cToken = tokenAddresses.cToken;
+const borrowing = tokenAddresses.borrowing;
+
 const tokens = require("./helpers/tokens");
 const contracts = require("./helpers/contracts");
 
 const erc20Abi = require("./abi/ERC20.json");
+const cerc20Abi = require("./abi/CERC20.json");
 
 let rariFundManager;
 let rariFundController;
@@ -54,4 +60,37 @@ async function deploy() {
   }
 }
 
-describe("RariFundController, RariFundTanks", async () => {});
+describe("RariFundController, RariFundTanks", async () => {
+  before(async () => {
+    await deploy().catch((error) => console.log(error));
+  });
+
+  describe("Unused Funds", async () => {
+    it("Supplies assets to Compound and mints cTokens", async () => {
+      const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
+      const cTokenContract = await hre.ethers.getContractAt(cerc20Abi, token);
+
+      await tokenContract
+        .connect(user)
+        .approve(rariFundController.address, 100);
+
+      await rariFundManager.connect(user).deposit("DAI", 100);
+      await rariFundController.connect(rebalancer).handleUnusedFunds(borrowing);
+    });
+
+    it("Borrows assets from Compound", async () => {});
+    it("Does not depositUnusedFunds if there are none", async () => {});
+    it("Values are reset after funds are deposited", async () => {});
+  });
+
+  describe("Rari Stable Pool Interactions", async () => {
+    it("Deposits into Rari", async () => {});
+    it("Stores RSPT", async () => {});
+    it("Withdraws funds from Rari", async () => {});
+  });
+
+  describe("Borrow amount", async () => {
+    it("Keeps the borrow balance at 50% of borrow amount", async () => {});
+    it("Uses Unused Funds", async () => {});
+  });
+});
