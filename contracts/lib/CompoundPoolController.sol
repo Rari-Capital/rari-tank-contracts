@@ -77,16 +77,15 @@ library CompoundPoolController {
         CErc20 cToken = CErc20(cErc20Contract);
         Comptroller comptroller = Comptroller(comptrollerContract);
         PriceFeed priceFeed = PriceFeed(priceFeedContract);
-
         // Get the Collateral Factor for the asset
         (, uint256 collateralFactorMantissa) = comptroller.markets(cErc20Contract);
 
         // Calculate the USD Amount
-        uint256 underlyingBalanceMantissa =
+        //uint256 underlyingBalanceMantissa =
             amount.mul(cToken.exchangeRateCurrent()).div(1e18);
 
         uint256 usdBalanceMantissa =
-            underlyingBalanceMantissa
+            amount
                 .mul(priceFeed.getUnderlyingPrice(cErc20Contract))
                 .div(1e18);
 
@@ -107,19 +106,24 @@ library CompoundPoolController {
         address cErc20Contract = getCErc20Contract(underlying);
         PriceFeed priceFeed = PriceFeed(priceFeedContract);
 
-        //Get the price of the underlying asset
-        uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract);
 
-        return usdAmount.mul(1e6).div(underlyingPrice);
+        //Get the price of the underlying asset
+        uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract).div(1e18);
+
+        return usdAmount.mul(1e18).div(underlyingPrice);
     }
 
     /**
         @dev Use the exchange rate to convert from Erc20 to CErc20
-        @param erc20Contract The address of the underlying ERC20 contract
+        @param underlying The address of the underlying ERC20 contract
         @param amount The amount of underlying tokens
      */
-    function getUnderlyingToCTokens(address erc20Contract, uint256 amount) internal returns (uint256) {
-        return amount.mul(1e18).div(CErc20(erc20Contract).exchangeRateCurrent());
+    function getUnderlyingToCTokens(address underlying, uint256 amount) internal returns (uint256) {
+        uint256 exchangeRate = CErc20(getCErc20Contract(underlying)).exchangeRateCurrent();
+        uint256 mantissa = 18 + (getERC20Decimals(underlying) - 8);
+        uint256 oneCTokenInUnderlying = exchangeRate.mul(10**getERC20Decimals(underlying)).div(10 ** mantissa);
+
+        return amount.mul(10**getERC20Decimals(underlying)).div(oneCTokenInUnderlying);
     }
 
     /**
@@ -135,5 +139,16 @@ library CompoundPoolController {
         if (underlying == 0xdAC17F958D2ee523a2206206994597C13D831ec7) return 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT => cUSDT
         if (underlying == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) return 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC => cWBTC
         else revert("CompoundFundController: Supported cToken address not found for this token address");
+    }
+
+    function getERC20Decimals(address underlying) private pure returns (uint256) {
+        if (underlying == 0x0D8775F648430679A709E98d2b0Cb6250d2887EF) return 18; // BAT
+        if (underlying == 0xc00e94Cb662C3520282E6f5717214004A7f26888) return 18; // COMP
+        if (underlying == 0x6B175474E89094C44Da98b954EedeAC495271d0F) return 18; // DAI
+        if (underlying == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) return 18; // UNI
+        if (underlying == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) return 6; // USDC
+        if (underlying == 0xdAC17F958D2ee523a2206206994597C13D831ec7) return 6; // USDT
+        if (underlying == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) return 8; // WBTC
+        else revert("CompoundFundController: Unsupported Currency");
     }
 }
