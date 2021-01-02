@@ -12,7 +12,7 @@ chai.use(chaiBnEqual);
 chai.use(chaiAsPromised);
 chai.should();
 
-const token = require("./helpers/token");
+const token = require("./helpers/token").underlying;
 const tokens = require("./helpers/tokens");
 const contracts = require("./helpers/contracts");
 
@@ -71,9 +71,7 @@ describe("RariFundManager", async () => {
   it("Sends funds to the RariFundTank", async () => {
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
 
-    await tokenContract
-      .connect(user)
-      .approve(rariFundController.address, 1000000);
+    await tokenContract.connect(user).approve(rariFundController.address, 1000);
 
     await tokenContract.connect(user).approve(rariFundController.address, 100);
     await rariFundManager.connect(user).deposit("DAI", 10);
