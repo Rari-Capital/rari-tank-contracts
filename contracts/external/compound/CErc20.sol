@@ -9,6 +9,8 @@ interface CErc20 {
 
     function borrow(uint256) external returns (uint256);
 
+    function balanceOf(address) external returns (uint256);
+
     function balanceOfUnderlying(address) external returns (uint256);
 
     function borrowBalanceCurrent(address) external returns (uint256);
