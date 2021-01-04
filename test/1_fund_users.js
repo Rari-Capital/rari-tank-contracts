@@ -56,7 +56,7 @@ async function deploy() {
 
   for (let i = 0; i < tokens.length; i++) {
     await rariFundController
-      .newTank(tokens[i])
+      .newTank(tokens[i].token, tokens[i].decimals)
       .catch((error) => console.log(error));
   }
 }

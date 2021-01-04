@@ -54,7 +54,7 @@ async function deploy() {
 
   for (let i = 0; i < tokens.length; i++) {
     await rariFundController
-      .newTank(tokens[i])
+      .newTank(tokens[i].token, tokens[i].decimals)
       .catch((error) => console.log(error));
   }
 }
@@ -67,7 +67,6 @@ describe("RariFundController, RariFundTanks", async () => {
   describe("Unused Funds", async () => {
     it("Supplies assets to Compound and mints cTokens", async () => {
       const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
-      //const cTokenContract = await hre.ethers.getContractAt(cerc20Abi, token);
       const depositAmount = "1000000000000000000000";
       await tokenContract
         .connect(user)
@@ -75,9 +74,15 @@ describe("RariFundController, RariFundTanks", async () => {
 
       await rariFundManager.connect(user).deposit("DAI", depositAmount);
       await rariFundController.connect(rebalancer).handleUnusedFunds(borrowing);
+
+      x = await tokenContract.balanceOf(rariFundController.getTank(token));
     });
 
-    it("Borrows assets from Compound", async () => {});
+    it("Borrows assets from Compound", async () => {
+      const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
+
+      x = await tokenContract.balanceOf(rariFundController.getTank(token));
+    });
     it("Does not depositUnusedFunds if there are none", async () => {});
     it("Values are reset after funds are deposited", async () => {});
   });
