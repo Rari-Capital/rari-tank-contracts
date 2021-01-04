@@ -98,9 +98,6 @@ library CompoundPoolController {
 
         //Get the price of the underlying asset
         uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract);
-
-        console.log("Underlying Price", underlyingPrice);
-        console.log("Total", usdAmount.mul(1e18).div(underlyingPrice));
         return usdAmount.mul(1e18).div(underlyingPrice);
     }
  

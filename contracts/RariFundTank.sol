@@ -89,8 +89,11 @@ contract RariFundTank is Ownable {
         uint256 usdBorrowAmount = comptroller.getMaxUSDBorrowAmount();
         //prettier-ignore
         uint256 borrowAmount = erc20Contract.calculateMaxBorrowAmount(usdBorrowAmount, priceFeed).div(2);
+        uint256 borrowBalance = erc20Contract.borrowBalanceCurrent();
 
-        erc20Contract.borrow(borrowAmount);
+        //prettier-ignore
+        if (borrowAmount > borrowBalance) erc20Contract.borrow(borrowAmount - borrowBalance);
+        else if(borrowBalance > borrowAmount) erc20Contract.repayBorrow(borrowBalance - borrowAmount);
 
         delete unusedDeposits;
         delete totalUnusedBalance;
