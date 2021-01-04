@@ -40,6 +40,7 @@ library CompoundPoolController {
 
         // Mint cTokens in return for the underlying asset
         uint256 error = cToken.mint(amount);
+        console.log(cToken.balanceOfUnderlying(address(this)));
         require(error == 0, "CERC20: Mint Error");
 
         // Enter markets
@@ -57,42 +58,29 @@ library CompoundPoolController {
     */
     function borrow(address underlying, uint256 amount) internal {
         require(amount > 0, "CompoundPoolController: Amount must be greater than 0");
-
+        
         //Borrow Tokens
-        CErc20(getCErc20Contract(underlying)).borrow(amount);
+        uint256 error = CErc20(getCErc20Contract(underlying)).borrow(amount);
+        require(error == 0, "CompoundPoolController: Compound Borrow Error");
+        console.log(IERC20(underlying).balanceOf(address(this)));
+    }
+
+    function repayBorrow(address underlying, uint256 amount) internal {
+        uint256 error = CErc20(getCErc20Contract(underlying)).repayBorrow(amount);
+        require(error == 0, "CompoundPoolController: Compound Repay Error");
     }
 
     /**
-        @dev Get the maximum borrow amount in USD
-        @param underlying The address of underlying ERC20 Contract
-        @param amount The amount of the underlying asset as collateral
-        @param comptrollerContract The address of Compound's Comptroller
-        @param priceFeedContract The address of Compound's PriceFeed
+        @dev Get 
+        @param comptrollerContract The address of Compound's Comptrolle
     */
     function getMaxUSDBorrowAmount(
-        address underlying,
-        uint256 amount,
-        address comptrollerContract,
-        address priceFeedContract
-    ) internal returns (uint256) {
-        address cErc20Contract = getCErc20Contract(underlying);
-        CErc20 cToken = CErc20(cErc20Contract);
+        address comptrollerContract
+    ) internal view returns (uint256) {
         Comptroller comptroller = Comptroller(comptrollerContract);
-        PriceFeed priceFeed = PriceFeed(priceFeedContract);
-        // Get the Collateral Factor for the asset
-        (, uint256 collateralFactorMantissa) = comptroller.markets(cErc20Contract);
 
-        // Calculate the USD Amount
-        //uint256 underlyingBalanceMantissa =
-            amount.mul(cToken.exchangeRateCurrent()).div(1e18);
-
-        uint256 usdBalanceMantissa =
-            amount
-                .mul(priceFeed.getUnderlyingPrice(cErc20Contract))
-                .div(1e18);
-
-        // Calculate and return the total USD borrow amount
-        return usdBalanceMantissa.mul(collateralFactorMantissa).div(1e18);
+        (, uint256 liquidity, ) = comptroller.getAccountLiquidity(address(this));
+        return liquidity;
     }
     /**
         @dev Given a USD amount, calculate the maximum borrow amount with that sum
@@ -108,13 +96,14 @@ library CompoundPoolController {
         address cErc20Contract = getCErc20Contract(underlying);
         PriceFeed priceFeed = PriceFeed(priceFeedContract);
 
-
         //Get the price of the underlying asset
-        uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract).div(1e18);
+        uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract);
 
+        console.log("Underlying Price", underlyingPrice);
+        console.log("Total", usdAmount.mul(1e18).div(underlyingPrice));
         return usdAmount.mul(1e18).div(underlyingPrice);
     }
-
+ 
     /**
         @dev Use the exchange rate to convert from Erc20 to CErc20
         @param underlying The address of the underlying ERC20 contract
@@ -126,6 +115,14 @@ library CompoundPoolController {
         uint256 oneCTokenInUnderlying = exchangeRate.mul(10**getERC20Decimals(underlying)).div(10 ** mantissa);
 
         return amount.mul(10**getERC20Decimals(underlying)).div(oneCTokenInUnderlying);
+    }
+
+    /**
+        @dev Retrieve the borrowed balance for the contract
+        @param underlying The address of the underlying ERC20 contract
+     */
+    function borrowBalanceCurrent(address underlying) internal returns (uint256) {
+        return CErc20(getCErc20Contract(underlying)).borrowBalanceCurrent(address(this));
     }
 
     /**

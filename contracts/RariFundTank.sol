@@ -1,6 +1,7 @@
 pragma solidity ^0.7.0;
 
 import "./lib/CompoundPoolController.sol";
+import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -11,6 +12,9 @@ contract RariFundTank is Ownable {
 
     ///@dev The address of the ERC20Token supported by the tank
     address private supportedToken;
+
+    ///@dev The decimal precision of the supportedToken
+    uint256 private decimals;
 
     ///@dev Compound's Comptroller Contract
     address private comptroller;
@@ -23,10 +27,12 @@ contract RariFundTank is Ownable {
 
     constructor(
         address _supportedToken,
+        uint256 _decimals,
         address _comptroller,
         address _priceFeed
     ) Ownable() {
         supportedToken = _supportedToken;
+        decimals = _decimals;
         comptroller = _comptroller;
         priceFeed = _priceFeed;
     }
@@ -66,6 +72,7 @@ contract RariFundTank is Ownable {
         @param erc20Contract The address of the ERC20 Contract to be borrowed (usually USDC)
     */
     function depositFunds(address erc20Contract) external onlyOwner() {
+        require(totalUnusedBalance > 0, "RariFundTank: No dormant funds available");
         // Calculate the cToken balance for each user
         for (uint256 i = 0; i < unusedDeposits.length; i++) {
             address account = unusedDeposits[i];
@@ -77,22 +84,16 @@ contract RariFundTank is Ownable {
         // Deposit the total unused balance into Compound
         supportedToken.deposit(totalUnusedBalance, comptroller); // Deposit all of the unused funds into Compound
 
-        // Calculate the total USD Borrow Amount
-        //prettier-ignore
-        uint256 usdBorrowAmount = supportedToken.getMaxUSDBorrowAmount(
-                totalUnusedBalance,
-                comptroller,
-                priceFeed
-            );
-
         // Calculate the total borrow amount
         //prettier-ignore
-        uint256 borrowAmount = erc20Contract.calculateMaxBorrowAmount(usdBorrowAmount, priceFeed);
+        uint256 usdBorrowAmount = comptroller.getMaxUSDBorrowAmount();
+        //prettier-ignore
+        uint256 borrowAmount = erc20Contract.calculateMaxBorrowAmount(usdBorrowAmount, priceFeed).div(2);
 
-        // Borrow half the borrow amount
-        erc20Contract.borrow(borrowAmount.div(2));
+        erc20Contract.borrow(borrowAmount);
 
         delete unusedDeposits;
+        delete totalUnusedBalance;
         dataVersionNumber++;
     }
 }

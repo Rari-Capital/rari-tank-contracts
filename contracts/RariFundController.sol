@@ -64,8 +64,9 @@ contract RariFundController is Ownable {
         @dev Deploys a new RariFundTank and store it in the contract
         @param erc20Contract The address of the ERC20 token to be supported by the tank
     */
-    function newTank(address erc20Contract) external onlyOwner() {
-        RariFundTank tank = new RariFundTank(erc20Contract, comptroller, priceFeed);
+    function newTank(address erc20Contract, uint256 decimals) external onlyOwner() {
+        RariFundTank tank =
+            new RariFundTank(erc20Contract, decimals, comptroller, priceFeed);
         rariFundTanks.push(address(tank));
         rariFundTankTokens[erc20Contract] = address(tank);
     }
