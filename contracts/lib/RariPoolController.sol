@@ -1,6 +1,6 @@
 pragma solidity ^0.7.0;
 
-import "../external/rari/RariFundManager.sol";
+import "../external/rari/IRariFundManager.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -14,7 +14,7 @@ library RariPoolController {
         uint256 amount
     ) internal {
         IERC20(underlying).approve(rariFundManager, amount);
-        bool error = RariFundManager(rariFundManager).deposit(currencyCode, amount);
+        bool error = IRariFundManager(rariFundManager).deposit(currencyCode, amount);
 
         require(error, "RariPoolController: Rari Pool Deposit Error");
     }
@@ -26,7 +26,7 @@ library RariPoolController {
         uint256 amount
     ) internal {
         IERC20(underlying).approve(rariFundManager, amount);
-        bool error = RariFundManager(rariFundManager).withdraw(currencyCode, amount);
+        bool error = IRariFundManager(rariFundManager).withdraw(currencyCode, amount);
 
         require(error, "RariPoolController: Rari Pool Withdrawal Error");
     }
@@ -35,6 +35,6 @@ library RariPoolController {
         internal
         returns (uint256)
     {
-        return RariFundManager(rariFundManager).getRawFundBalance(currencyCode);
+        return IRariFundManager(rariFundManager).getRawFundBalance(currencyCode);
     }
 }

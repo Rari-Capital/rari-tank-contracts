@@ -4,7 +4,7 @@ pragma solidity ^0.7.0;
     @title Compound's CErc20 Contract
     @author Compound
  */
-interface CErc20 {
+interface ICErc20 {
     function mint(uint256) external returns (uint256);
 
     function borrow(uint256) external returns (uint256);

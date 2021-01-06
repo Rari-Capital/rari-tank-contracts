@@ -1,6 +1,6 @@
 pragma solidity ^0.7.0;
 
-interface RariFundManager {
+interface IRariFundManager {
     function balanceOf(address) external returns (uint256);
 
     function getRawFundBalance(string memory) external returns (uint256);
