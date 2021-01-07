@@ -120,6 +120,7 @@ library CompoundPoolController {
         return amount.mul(1e18).div(CErc20(erc20Contract).exchangeRateCurrent());
     }
 
+
     /**
         @dev Returns a token's cToken contract address given its ERC20 contract address.
         @param erc20Contract The ERC20 contract address of the token

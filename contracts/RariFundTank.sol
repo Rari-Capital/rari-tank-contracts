@@ -1,28 +1,20 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.7.0;
 
-import "./libraries/CompoundPoolController.sol";
+import "./lib/CompoundPoolController.sol";
+import "hardhat/console.sol";
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/erc20/IERC20.sol";
-import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
 
-/**
-    @title RariFundTank
-    @notice Handles interaction with Compound and Rari Pools to earn yield
-    @author Jet Jadeja (jet@rari.capital)
-*/
-contract RariFundTank {
+contract RariFundTank is Ownable {
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using CompoundPoolController for address;
 
-    ///@dev The token represented by the tank
+    ///@dev The address of the ERC20Token supported by the tank
     address private supportedToken;
 
-    ///@dev The address of the RariFundController Contract
-    address private rariFundController;
-
-    ///@dev Maps user addresses to their cToken balances
-    mapping(address => uint256) private cTokenBalances;
+    ///@dev The decimal precision of the supportedToken
+    uint256 private decimals;
 
     ///@dev Compound's Comptroller Contract
     address private comptroller;
@@ -30,28 +22,20 @@ contract RariFundTank {
     ///@dev Compound's Pricefeed program
     address private priceFeed;
 
-    ///@dev Ensures that a function can only be called from the RariFundController
-    modifier onlyController() {
-        require(
-            msg.sender == rariFundController,
-            "RariFundTank: Function must be called by the Fund Controller"
-        );
-        _;
-    }
+    ///@dev Maps user addresses to their cToken balances
+    mapping(address => uint256) private cTokenBalances;
 
     constructor(
         address _supportedToken,
-        address _rariFundController,
+        uint256 _decimals,
         address _comptroller,
         address _priceFeed
-    ) public {
+    ) Ownable() {
         supportedToken = _supportedToken;
-        rariFundController = _rariFundController;
+        decimals = _decimals;
         comptroller = _comptroller;
         priceFeed = _priceFeed;
     }
-
-    event Deposit(address account, uint256 amount);
 
     ///@dev An array of addresses whose funds have yet to be converted to cTokens
     address[] private unusedDeposits;
@@ -60,71 +44,59 @@ contract RariFundTank {
     uint256 private dataVersionNumber;
 
     ///@dev Maps addresses to the amount of unused funds they have deposited
-    mapping(bytes32 => uint256) private unusedDepositBalances;
+    mapping(uint256 => mapping(address => uint256)) private unusedDepositBalances;
 
     ///@dev The total unused token balance
-    uint256 private totalUnusedBalance;
+    uint256 public totalUnusedBalance;
 
     /**
         @dev Deposit funds into the tank
-        @param account The address that supplied the funds
-        @param amount The amount of the fund being supplied
+        @param account The address of the depositing user
+        @param amount The amount being deposited
     */
-    function deposit(address account, uint256 amount) external onlyController() {
-        IERC20(supportedToken).safeTransferFrom(account, address(this), amount);
+    function deposit(address account, uint256 amount) external onlyOwner() {
+        require(
+            supportedToken.getPrice(amount, priceFeed) >= 500,
+            "RariFundTank: Deposit amount must be over 500 dollars"
+        );
 
         bytes32 key = keccak256(abi.encode(account, dataVersionNumber));
-        if (unusedDepositBalances[key] == 0) unusedDeposits.push(account);
-        unusedDepositBalances[key] += amount;
+        //prettier-ignore
+        if (unusedDepositBalances[dataVersionNumber][account] == 0) unusedDeposits.push(account);
+        unusedDepositBalances[dataVersionNumber][account] += amount;
         totalUnusedBalance += amount;
-
-        emit Deposit(account, amount);
     }
 
-    event UnusedDeposited(uint256 blockNum);
-
     /**
-        @dev Deposit unused funds to Compound, borrow funds and deposit them into Rari's Stable Pool
-        @param erc20Contract The address of the asset to be borrowed
+        @dev Deposits unused funds into Compound and borrows another asset
+        @param erc20Contract The address of the ERC20 Contract to be borrowed (usually USDC)
     */
-    function depositUnusedFunds(address erc20Contract) external onlyController() {
+    function depositFunds(address erc20Contract) external onlyOwner() {
+        require(totalUnusedBalance > 0, "RariFundTank: No dormant funds available");
+        // Calculate the cToken balance for each user
         for (uint256 i = 0; i < unusedDeposits.length; i++) {
             address account = unusedDeposits[i];
+
             //prettier-ignore
-            uint256 deposited = unusedDepositBalances[keccak256(abi.encode(account, dataVersionNumber))];
-
-            // Store cToken Balance using exchange rate data
-            cTokenBalances[account] = CompoundPoolController.getUnderlyingToCTokens(
-                supportedToken,
-                deposited
-            );
+            uint256 deposited = unusedDepositBalances[dataVersionNumber][account];
+            cTokenBalances[account] += supportedToken.getUnderlyingToCTokens(deposited);
         }
+        // Deposit the total unused balance into Compound
+        supportedToken.deposit(totalUnusedBalance, comptroller); // Deposit all of the unused funds into Compound
 
-        CompoundPoolController.deposit(supportedToken, totalUnusedBalance, comptroller);
+        // Calculate the total borrow amount
+        //prettier-ignore
+        uint256 usdBorrowAmount = comptroller.getMaxUSDBorrowAmount();
+        //prettier-ignore
+        uint256 borrowAmount = erc20Contract.calculateMaxBorrowAmount(usdBorrowAmount, priceFeed).div(2);
+        uint256 borrowBalance = erc20Contract.borrowBalanceCurrent();
 
         //prettier-ignore
-        uint256 totalUsdBorrowAmount = CompoundPoolController.getMaxUSDBorrowAmount(
-            supportedToken,
-            totalUnusedBalance,
-            comptroller,
-            priceFeed
-        );
+        if (borrowAmount > borrowBalance) erc20Contract.borrow(borrowAmount - borrowBalance);
+        else if(borrowBalance > borrowAmount) erc20Contract.repayBorrow(borrowBalance - borrowAmount);
 
-        //prettier-ignore
-        uint256 maxCurrencyBorrowAmount = CompoundPoolController.getAssetBorrowAmount(
-            supportedToken,
-            totalUsdBorrowAmount,
-            comptroller
-        );
-
-        // Borrow funds
-        CompoundPoolController.borrow(erc20Contract, maxCurrencyBorrowAmount.div(2));
-
-        // Clear data about unused funds
         delete unusedDeposits;
         delete totalUnusedBalance;
         dataVersionNumber++;
-
-        emit UnusedDeposited(block.number);
     }
 }

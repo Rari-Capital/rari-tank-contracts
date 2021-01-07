@@ -1,16 +1,21 @@
-pragma solidity ^0.7.0;
+pragma solidity ^0.5.0;
 
 import "./RariFundController.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/token/erc20/IERC20.sol";
+import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
 
 /**
     @title RariFundManager
-    @notice Handles deposits and withdrawals into the Tanks
+    @notice Handles deposits and withdrawals into the pool
     @author Jet Jadeja (jet@rari.capital)
 */
 contract RariFundManager is Ownable {
-    ///@dev Address of the RariFundController
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+
+    ///@dev The address of the RariFundController Contract
     address private rariFundControllerContract;
 
     ///@dev The RariFundController contract
@@ -28,7 +33,16 @@ contract RariFundManager is Ownable {
     ///@dev Maps supported currency codes to their decimal precisions
     mapping(string => uint256) private currencyDecimals;
 
-    constructor() {
+    ///@dev Ensures that a function can only be called from the RariFundController
+    modifier onlyController() {
+        require(
+            msg.sender == rariFundControllerContract,
+            "RariFundManager: Function must be called by the Fund Controller"
+        );
+        _;
+    }
+
+    constructor() public Ownable() {
         addSupportedCurrency("BAT", 0x0D8775F648430679A709E98d2b0Cb6250d2887EF, 18);
         addSupportedCurrency("COMP", 0xc00e94Cb662C3520282E6f5717214004A7f26888, 18);
         addSupportedCurrency("DAI", 0x6B175474E89094C44Da98b954EedeAC495271d0F, 6);
@@ -37,23 +51,6 @@ contract RariFundManager is Ownable {
         addSupportedCurrency("USDC", 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, 6);
         addSupportedCurrency("USDT", 0xdAC17F958D2ee523a2206206994597C13D831ec7, 6);
         addSupportedCurrency("ZRX", 0xE41d2489571d322189246DaFA5ebDe1F4699F498, 18);
-    }
-
-    /**
-        @dev Add a supported ERC20 token to the contract
-        @param currencyCode The currency code of the token
-        @param currencyAddress The ERC20 contract address of the token
-        @param decimals The decimal presion of the token
-    */
-    function addSupportedCurrency(
-        string memory currencyCode,
-        address currencyAddress,
-        uint256 decimals
-    ) private {
-        currencyIndexes[currencyCode] = supportedCurrencies.length;
-        supportedCurrencies.push(currencyCode);
-        currencyAddresses[currencyCode] = currencyAddress;
-        currencyDecimals[currencyCode] = decimals;
     }
 
     /**
@@ -68,10 +65,40 @@ contract RariFundManager is Ownable {
         rariFundController = RariFundController(_rariFundControllerContract);
     }
 
+    /**
+        @dev Add a supported ERC20 token to the contract
+        @param currencyCode The currency code of the token
+        @param currencyAddress The ERC20 contract address of the token
+        @param decimals The decimal presion of the token
+    */
+    function addSupportedCurrency(
+        string memory currencyCode,
+        address currencyAddress,
+        uint256 decimals
+    ) internal {
+        currencyIndexes[currencyCode] = supportedCurrencies.length;
+        supportedCurrencies.push(currencyCode);
+        currencyAddresses[currencyCode] = currencyAddress;
+        currencyDecimals[currencyCode] = decimals;
+    }
+
+    function getRariFundController() external view returns (address) {
+        return rariFundControllerContract;
+    }
+
+    event Deposit(string currencyCode, address account, uint256 amount);
+
+    /**
+        @dev Deposit funds into the contract and send them to the FundController
+        @param currencyCode The currency code of the asset 
+        @param amount The amount of the asset to be deposited
+    */
     function deposit(string calldata currencyCode, uint256 amount) external {
-        address erc20Contract = currencyAddresses[currencyCode];
+        emit Deposit(currencyCode, msg.sender, amount);
+
+        address erc20TokenContract = currencyAddresses[currencyCode];
         //prettier-ignore
-        require(erc20Contract != address(0), "RariFundManager: Invalid Currency Code");
-        rariFundController.deposit(erc20Contract, msg.sender, amount);
+        require(erc20TokenContract != address(0), "RariFundManager: Invalid Currency Code");
+        rariFundController.deposit(erc20TokenContract, msg.sender, amount);
     }
 }

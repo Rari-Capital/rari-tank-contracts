@@ -1,8 +1,4 @@
-/node_modules
-/build
-/.prettierrc
-/.prettierignore
-/.editorconfig
-/contracts/base
-/coverage
-/coverage.json
+node_modules
+artifacts
+cache
+.editorconfig

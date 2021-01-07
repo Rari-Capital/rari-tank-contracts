@@ -1,84 +1,121 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.7.0;
 
 import "./RariFundTank.sol";
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "@openzeppelin/contracts/token/erc20/IERC20.sol";
-import "@openzeppelin/contracts/token/erc20/SafeERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 /**
     @title RariFundController
-    @notice Holds the funds handling deposits and withdrawals into Compound and the Rari Stable Pool 
-    @author Jet Jadeja (jet@rari.capital) 
+    @notice Handles interactions with the individual tanks
+    @author Jet Jadeja (jet@rari.capital)
 */
-contract RariFundController is Ownable, Initializable {
+contract RariFundController is Ownable {
     using SafeERC20 for IERC20;
 
-    ///@dev The address of the RariFundManager contract
+    ///@dev The address of the RariFundManager
     address private rariFundManager;
 
-    ///@dev An array of RariFundTank addresses
+    ///@dev The address of the rebalancer
+    address private fundRebalancer;
+
+    ///@dev An array of the addresses of the RariFundTanks
     address[] private rariFundTanks;
 
-    ///@dev Maps currencies to their corresponding tank
-    mapping(address => address) private rariFundTankTokens;
+    ///@dev Maps currency to tank address
+    mapping(address => address) rariFundTankTokens;
 
-    function initialize(address _rariFundManager) public initializer {
+    ///@dev Compound's Comptroller Contract
+    address private comptroller;
+
+    ///@dev Compound's Pricefeed program
+    address private priceFeed;
+
+    constructor(
+        address _rariFundManager,
+        address _fundRebalancer,
+        address _comptroller,
+        address _priceFeed
+    ) {
         rariFundManager = _rariFundManager;
+        fundRebalancer = _fundRebalancer;
+        comptroller = _comptroller;
+        priceFeed = _priceFeed;
     }
 
-    ///@dev Ensures that a function can only be called from the RariFundController
-    modifier onlyFundManager() {
-        //prettier-ignore
-        require(msg.sender == rariFundManager, "RariFundController: Function must be called by the Fund Manager");
+    modifier onlyRariFundManager() {
+        require(
+            msg.sender == rariFundManager,
+            "RariFundController: Function must be called by the RariFundManager"
+        );
         _;
     }
 
-    event NewTankSet(address token, address tank);
-
-    /**
-        @dev Deploy a new tank and add it to the contract
-        @param token The address of the token supported by the tank
-    */
-    function newTank(
-        address token,
-        address comptroller,
-        address priceFeed
-    ) external onlyOwner() {
-        //prettier-ignore
-        RariFundTank tank = new RariFundTank(token, address(this), comptroller, priceFeed);
-        rariFundTanks.push(address(tank));
-        rariFundTankTokens[token] = address(tank);
-
-        emit NewTankSet(token, address(tank));
+    modifier onlyFundRebalancer() {
+        require(
+            msg.sender == fundRebalancer,
+            "RariFundController: Function must be called by the Fund Rebalanncer"
+        );
+        _;
     }
 
-    event Deposit(address token, address account, uint256 amount);
+    /**
+        @dev Deploys a new RariFundTank and store it in the contract
+        @param erc20Contract The address of the ERC20 token to be supported by the tank
+    */
+    function newTank(address erc20Contract, uint256 decimals) external onlyOwner() {
+        RariFundTank tank =
+            new RariFundTank(erc20Contract, decimals, comptroller, priceFeed);
+        rariFundTanks.push(address(tank));
+        rariFundTankTokens[erc20Contract] = address(tank);
+    }
 
     /**
-        @dev Deposit tokens into one of the RariFundTanks
-        @param token The address of the token
-        @param account The address depositing
-        @param amount The amount being deposited
+        @dev Given the address of a currency, return the address of its corresponding tank
+        @param erc20Contract The address of the ERC20 Token that the tank corresponds to
+    */
+    function getTank(address erc20Contract) external view returns (address) {
+        address tank = rariFundTankTokens[erc20Contract];
+        if (tank != address(0)) return tank;
+        else revert("RariFundController: Tank not supported");
+    }
+
+    /**
+        @dev Deposit funds into a specific tank
+        @param erc20Contract The address of the ERC20 Token to be deposited
+        @param account The address of the depositer
+        @param amount The amount that is being deposited
     */
     function deposit(
-        address token,
+        address erc20Contract,
         address account,
         uint256 amount
-    ) external onlyFundManager() {
-        emit Deposit(token, account, amount);
+    ) external onlyRariFundManager() {
+        address tankContract = rariFundTankTokens[erc20Contract];
 
-        address tank = rariFundTankTokens[token];
-        require(tank != address(0), "RariFundController: Incompatible Token");
-        RariFundTank(tank).deposit(account, amount);
+        IERC20(erc20Contract).safeTransferFrom(account, tankContract, amount);
+        RariFundTank(tankContract).deposit(account, amount);
     }
 
     /**
-        @dev Given the address of an ERC20 token, get the address of it's corresponding tank
-        @param token The address of the token
+        @dev Deposit the tanks' unused funds into Compound
+        @param erc20Contract The address of the erc20Contract to be borrowed by the 
     */
-    function getTank(address token) external view returns (address) {
-        return rariFundTankTokens[token];
+    function handleUnusedFunds(address erc20Contract) external onlyFundRebalancer() {
+        for (uint256 i = 0; i < rariFundTanks.length; i++) {
+            RariFundTank tank = RariFundTank(rariFundTanks[i]);
+
+            if (tank.totalUnusedBalance() > uint256(0)) {
+                tank.depositFunds(erc20Contract);
+            }
+        }
+    }
+
+    /**
+        @dev Get the total amount of tokens locked in the contract
+    */
+    function getTotalTokensLocked(address erc20Contract) external view returns (uint256) {
+        return IERC20(erc20Contract).balanceOf(rariFundTankTokens[erc20Contract]);
     }
 }
