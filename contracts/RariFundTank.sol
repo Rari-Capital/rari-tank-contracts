@@ -78,7 +78,9 @@ contract RariFundTank is Ownable {
     */
     function deposit(address account, uint256 amount) external onlyOwner() {
         require(
-            CompoundPoolController.getPrice(supportedToken, amount, priceFeed) >= 500,
+            CompoundPoolController.getPrice(supportedToken, amount, priceFeed).div(
+                1e18
+            ) >= 500,
             "RariFundTank: Deposit amount must be over 500 dollars"
         );
 
@@ -154,23 +156,15 @@ contract RariFundTank is Ownable {
 
             // Calculate the total borrow amount
             //prettier-ignore
-            uint256 usdBorrowAmount = CompoundPoolController.getMaxUSDBorrowAmount(supportedToken, comptroller);
+            uint256 usdBorrowAmount = CompoundPoolController.getMaxUSDBorrowAmount(supportedToken, comptroller, priceFeed);
             //prettier-ignore
             uint256 borrowAmount = CompoundPoolController.calculateMaxBorrowAmount(erc20Contract, usdBorrowAmount, priceFeed).div(2);
             uint256 borrowBalance =
                 CompoundPoolController.borrowBalanceCurrent(erc20Contract);
 
-            console.log(borrowAmount);
-            console.log(borrowBalance);
-
             //prettier-ignore
             if (borrowAmount > borrowBalance) borrow(erc20Contract, currencyCode, borrowAmount - borrowBalance);
             else if(borrowBalance > borrowAmount) redeem(erc20Contract, currencyCode, borrowBalance - borrowAmount);
-
-            console.log(CompoundPoolController.borrowBalanceCurrent(erc20Contract));
-            console.log(
-                CompoundPoolController.getMaxUSDBorrowAmount(supportedToken, comptroller)
-            );
         }
     }
 

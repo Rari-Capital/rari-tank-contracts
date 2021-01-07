@@ -73,19 +73,24 @@ library CompoundPoolController {
     */
     function getMaxUSDBorrowAmount(
         address underlying,
-        address comptrollerContract
+        address comptrollerContract,
+        address priceFeedContract
     ) internal returns (uint256) {
         IComptroller comptroller = IComptroller(comptrollerContract);
         address cerc20Contract = getCErc20Contract(underlying);
         ICErc20 cToken = ICErc20(cerc20Contract);
-
+        IPriceFeed priceFeed = IPriceFeed(priceFeedContract);
+        
         //(, uint256 liquidity, ) = comptroller.getAccountLiquidity(address(this));
-        
-        uint256 balanceOfUnderlying = cToken.balanceOfUnderlying(address(this));
-        (, uint256 collateralFactorMantissa, ) = comptroller.markets(cerc20Contract);
-        
 
-        return balanceOfUnderlying.mul(collateralFactorMantissa).div(1e18);
+        uint256 price = priceFeed.getUnderlyingPrice(getCErc20Contract(underlying));
+        uint256 balanceOfUnderlying = cToken.balanceOfUnderlying(address(this));
+
+        uint256 usdBalance = balanceOfUnderlying.mul(price).div(1e18);
+        (, uint256 collateralFactorMantissa, ) = comptroller.markets(cerc20Contract);
+
+
+        return usdBalance.mul(collateralFactorMantissa).div(1e18);
     }
     /**
         @dev Given a USD amount, calculate the maximum borrow amount with that sum
@@ -146,23 +151,18 @@ library CompoundPoolController {
     */
     function getCErc20Contract(address underlying) private pure returns (address) {
         if (underlying == 0x0D8775F648430679A709E98d2b0Cb6250d2887EF) return 0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E; // BAT => cBAT
-        if (underlying == 0xc00e94Cb662C3520282E6f5717214004A7f26888) return 0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4; // COMP => cCOMP
-        if (underlying == 0x6B175474E89094C44Da98b954EedeAC495271d0F) return 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643; // DAI => cDAI
         if (underlying == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) return 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI => cUNI
         if (underlying == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) return 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC => cUSDC
-        if (underlying == 0xdAC17F958D2ee523a2206206994597C13D831ec7) return 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9; // USDT => cUSDT
         if (underlying == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) return 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC => cWBTC
-        else revert("CompoundFundController: Supported cToken address not found for this token address");
+        if (underlying == 0xE41d2489571d322189246DaFA5ebDe1F4699F498) return 0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407; // ZRX => cZRX
+        else revert("CompoundPoolController: Supported cToken address not found for this token address");
     }
 
     function getERC20Decimals(address underlying) private pure returns (uint256) {
-        if (underlying == 0x0D8775F648430679A709E98d2b0Cb6250d2887EF) return 18; // BAT
-        if (underlying == 0xc00e94Cb662C3520282E6f5717214004A7f26888) return 18; // COMP
-        if (underlying == 0x6B175474E89094C44Da98b954EedeAC495271d0F) return 18; // DAI
+        if (underlying == 0xE41d2489571d322189246DaFA5ebDe1F4699F498) return 18; // ZRX
         if (underlying == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) return 18; // UNI
         if (underlying == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) return 6; // USDC
-        if (underlying == 0xdAC17F958D2ee523a2206206994597C13D831ec7) return 6; // USDT
         if (underlying == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) return 8; // WBTC
-        else revert("CompoundFundController: Unsupported Currency");
+        else revert("CompoundPoolController: Unsupported Currency");
     }
 }

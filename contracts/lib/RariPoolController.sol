@@ -13,9 +13,7 @@ library RariPoolController {
         address underlying,
         uint256 amount
     ) internal {
-        console.log("1");
         IERC20(underlying).approve(rariFundManager, amount);
-        console.log("2");
         IRariFundManager(rariFundManager).deposit(currencyCode, amount);
     }
 
