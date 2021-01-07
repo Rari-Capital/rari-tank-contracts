@@ -5,7 +5,7 @@ interface IRariFundManager {
 
     function getRawFundBalance(string memory) external returns (uint256);
 
-    function deposit(string calldata, uint256) external returns (bool);
+    function deposit(string calldata, uint256) external;
 
-    function withdraw(string calldata, uint256) external returns (bool);
+    function withdraw(string calldata, uint256) external;
 }

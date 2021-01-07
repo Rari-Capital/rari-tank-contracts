@@ -32,16 +32,21 @@ contract RariFundController is Ownable {
     ///@dev Compound's Pricefeed program
     address private priceFeed;
 
+    ///@dev The address of the Rari Stable Pool Fund Manager
+    address private rariStablePool;
+
     constructor(
         address _rariFundManager,
         address _fundRebalancer,
         address _comptroller,
-        address _priceFeed
+        address _priceFeed,
+        address _rariStablePool
     ) {
         rariFundManager = _rariFundManager;
         fundRebalancer = _fundRebalancer;
         comptroller = _comptroller;
         priceFeed = _priceFeed;
+        rariStablePool = _rariStablePool;
     }
 
     modifier onlyRariFundManager() {
@@ -66,7 +71,13 @@ contract RariFundController is Ownable {
     */
     function newTank(address erc20Contract, uint256 decimals) external onlyOwner() {
         RariFundTank tank =
-            new RariFundTank(erc20Contract, decimals, comptroller, priceFeed);
+            new RariFundTank(
+                erc20Contract,
+                decimals,
+                comptroller,
+                priceFeed,
+                rariStablePool
+            );
         rariFundTanks.push(address(tank));
         rariFundTankTokens[erc20Contract] = address(tank);
     }
@@ -102,13 +113,13 @@ contract RariFundController is Ownable {
         @dev Deposit the tanks' unused funds into Compound
         @param erc20Contract The address of the erc20Contract to be borrowed by the 
     */
-    function handleUnusedFunds(address erc20Contract) external onlyFundRebalancer() {
+    function rebalance(address erc20Contract, string memory currencyCode)
+        external
+        onlyFundRebalancer()
+    {
         for (uint256 i = 0; i < rariFundTanks.length; i++) {
             RariFundTank tank = RariFundTank(rariFundTanks[i]);
-
-            if (tank.totalUnusedBalance() > uint256(0)) {
-                tank.depositFunds(erc20Contract);
-            }
+            tank.rebalance(erc20Contract, currencyCode);
         }
     }
 

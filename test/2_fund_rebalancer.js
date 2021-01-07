@@ -47,7 +47,8 @@ async function deploy() {
     rariFundManager.address,
     rebalancer.address,
     contracts.comptroller,
-    contracts.priceFeed
+    contracts.priceFeed,
+    contracts.rariFundManager
   );
   await rariFundController.deployed();
   await rariFundManager.setRariFundController(rariFundController.address);
@@ -73,7 +74,7 @@ describe("RariFundController, RariFundTanks", async () => {
         .approve(rariFundController.address, depositAmount);
 
       await rariFundManager.connect(user).deposit("DAI", depositAmount);
-      await rariFundController.connect(rebalancer).handleUnusedFunds(borrowing);
+      await rariFundController.connect(rebalancer).rebalance(borrowing, "USDC");
 
       x = await tokenContract.balanceOf(rariFundController.getTank(token));
     });

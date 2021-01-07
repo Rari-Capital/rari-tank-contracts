@@ -8,7 +8,6 @@ import "../external/compound/IPriceFeed.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 /**
     @title CompoundPoolController
@@ -40,7 +39,6 @@ library CompoundPoolController {
 
         // Mint cTokens in return for the underlying asset
         uint256 error = cToken.mint(amount);
-        console.log(cToken.balanceOfUnderlying(address(this)));
         require(error == 0, "CERC20: Mint Error");
 
         // Enter markets
@@ -62,7 +60,6 @@ library CompoundPoolController {
         //Borrow Tokens
         uint256 error = ICErc20(getCErc20Contract(underlying)).borrow(amount);
         require(error == 0, "CompoundPoolController: Compound Borrow Error");
-        console.log(IERC20(underlying).balanceOf(address(this)));
     }
 
     function repayBorrow(address underlying, uint256 amount) internal {
@@ -75,12 +72,20 @@ library CompoundPoolController {
         @param comptrollerContract The address of Compound's Comptrolle
     */
     function getMaxUSDBorrowAmount(
+        address underlying,
         address comptrollerContract
-    ) internal view returns (uint256) {
+    ) internal returns (uint256) {
         IComptroller comptroller = IComptroller(comptrollerContract);
+        address cerc20Contract = getCErc20Contract(underlying);
+        ICErc20 cToken = ICErc20(cerc20Contract);
 
-        (, uint256 liquidity, ) = comptroller.getAccountLiquidity(address(this));
-        return liquidity;
+        //(, uint256 liquidity, ) = comptroller.getAccountLiquidity(address(this));
+        
+        uint256 balanceOfUnderlying = cToken.balanceOfUnderlying(address(this));
+        (, uint256 collateralFactorMantissa, ) = comptroller.markets(cerc20Contract);
+        
+
+        return balanceOfUnderlying.mul(collateralFactorMantissa).div(1e18);
     }
     /**
         @dev Given a USD amount, calculate the maximum borrow amount with that sum

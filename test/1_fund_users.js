@@ -48,7 +48,8 @@ async function deploy() {
     rariFundManager.address,
     rebalancer.address,
     contracts.comptroller,
-    contracts.priceFeed
+    contracts.priceFeed,
+    contracts.rariFundManager
   );
   await rariFundController.deployed();
 
