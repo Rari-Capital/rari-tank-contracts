@@ -27,6 +27,7 @@
     "hardhat": "^2.0.6",
     "prettier": "2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.2",
+    "solidity-coverage": "^0.7.13",
     "ts-node": "^9.1.1",
     "typescript": "^4.1.3"
   },
