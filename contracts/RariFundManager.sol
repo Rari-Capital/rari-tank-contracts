@@ -69,4 +69,11 @@ contract RariFundManager is Ownable {
         require(erc20Contract != address(0), "RariFundManager: Invalid Currency Code");
         rariFundController.deposit(erc20Contract, msg.sender, amount);
     }
+
+    function withdraw(string calldata currencyCode, uint256 amount) external {
+        address erc20Contract = currencyAddresses[currencyCode];
+
+        require(erc20Contract != address(0), "RariFundManager: Invalid Currency Code");
+        rariFundController.withdraw(erc20Contract, msg.sender, amount);
+    }
 }

@@ -69,10 +69,15 @@ contract RariFundController is Ownable {
         @dev Deploys a new RariFundTank and store it in the contract
         @param erc20Contract The address of the ERC20 token to be supported by the tank
     */
-    function newTank(address erc20Contract, uint256 decimals) external onlyOwner() {
+    function newTank(
+        address erc20Contract,
+        address erc20BorrowContract,
+        uint256 decimals
+    ) external onlyOwner() {
         RariFundTank tank =
             new RariFundTank(
                 erc20Contract,
+                erc20BorrowContract,
                 decimals,
                 comptroller,
                 priceFeed,
@@ -109,17 +114,22 @@ contract RariFundController is Ownable {
         RariFundTank(tankContract).deposit(account, amount);
     }
 
+    function withdraw(
+        address erc20Contract,
+        address account,
+        uint256 amount
+    ) external onlyRariFundManager() {
+        address tankContract = rariFundTankTokens[erc20Contract];
+        RariFundTank(tankContract).withdraw(account, amount);
+    }
+
     /**
         @dev Deposit the tanks' unused funds into Compound
-        @param erc20Contract The address of the erc20Contract to be borrowed by the 
     */
-    function rebalance(address erc20Contract, string memory currencyCode)
-        external
-        onlyFundRebalancer()
-    {
+    function rebalance() external onlyFundRebalancer() {
         for (uint256 i = 0; i < rariFundTanks.length; i++) {
             RariFundTank tank = RariFundTank(rariFundTanks[i]);
-            tank.rebalance(erc20Contract, currencyCode);
+            tank.rebalance();
         }
     }
 
