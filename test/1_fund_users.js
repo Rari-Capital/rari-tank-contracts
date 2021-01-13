@@ -29,11 +29,11 @@ async function deploy() {
   [owner, rebalancer] = await ethers.getSigners();
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: ["0x66c57bf505a85a74609d2c83e94aabb26d691e1f"],
+    params: ["0x2bc812c70dcd634a07ce4fb9cd9ba4319fd9898d"],
   });
 
   user = await ethers.provider.getSigner(
-    "0x66c57bf505a85a74609d2c83e94aabb26d691e1f"
+    "0x2bc812c70dcd634a07ce4fb9cd9ba4319fd9898d"
   );
 
   //prettier-ignore
@@ -48,7 +48,8 @@ async function deploy() {
     rariFundManager.address,
     rebalancer.address,
     contracts.comptroller,
-    contracts.priceFeed
+    contracts.priceFeed,
+    contracts.rariFundManager
   );
   await rariFundController.deployed();
 
@@ -67,18 +68,18 @@ describe("RariFundManager", async () => {
   });
 
   it("Reverts if the currency is not supported", async () => {
-    await rariFundManager.deposit("NONE", 50).should.be.rejectedWith("revert");
+    await rariFundManager.deposit("NONE", 5).should.be.rejectedWith("revert");
   });
 
   it("Sends funds to the RariFundTank", async () => {
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
-    const depositNumber = "1000000000000000000000";
+    const depositNumber = "2000000000000000000000";
 
     await tokenContract
       .connect(user)
       .approve(rariFundController.address, depositNumber);
 
-    await rariFundManager.connect(user).deposit("DAI", depositNumber);
+    await rariFundManager.connect(user).deposit("ZRX", depositNumber);
     await rariFundController
       .getTotalTokensLocked(token)
       .should.eventually.bnEqual(depositNumber);
@@ -92,7 +93,7 @@ describe("RariFundManager", async () => {
     await tokenContract.approve(rariFundController.address, depositNumber);
     await rariFundManager
       .connect(user)
-      .deposit("DAI", depositNumber)
+      .deposit("ZRX", depositNumber)
       .should.be.rejectedWith("revert");
   });
 });

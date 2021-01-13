@@ -28,11 +28,11 @@ async function deploy() {
   [owner, rebalancer] = await ethers.getSigners();
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: ["0x66c57bf505a85a74609d2c83e94aabb26d691e1f"],
+    params: ["0x2bc812c70dcd634a07ce4fb9cd9ba4319fd9898d"],
   });
 
   user = await ethers.provider.getSigner(
-    "0x66c57bf505a85a74609d2c83e94aabb26d691e1f"
+    "0x2bc812c70dcd634a07ce4fb9cd9ba4319fd9898d"
   );
 
   //prettier-ignore
@@ -47,7 +47,8 @@ async function deploy() {
     rariFundManager.address,
     rebalancer.address,
     contracts.comptroller,
-    contracts.priceFeed
+    contracts.priceFeed,
+    contracts.rariFundManager
   );
   await rariFundController.deployed();
   await rariFundManager.setRariFundController(rariFundController.address);
@@ -67,13 +68,14 @@ describe("RariFundController, RariFundTanks", async () => {
   describe("Unused Funds", async () => {
     it("Supplies assets to Compound and mints cTokens", async () => {
       const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
-      const depositAmount = "1000000000000000000000";
+      const depositAmount = "2000000000000000000000";
+
       await tokenContract
         .connect(user)
         .approve(rariFundController.address, depositAmount);
 
-      await rariFundManager.connect(user).deposit("DAI", depositAmount);
-      await rariFundController.connect(rebalancer).handleUnusedFunds(borrowing);
+      await rariFundManager.connect(user).deposit("ZRX", depositAmount);
+      await rariFundController.connect(rebalancer).rebalance(borrowing, "USDC");
 
       x = await tokenContract.balanceOf(rariFundController.getTank(token));
     });
