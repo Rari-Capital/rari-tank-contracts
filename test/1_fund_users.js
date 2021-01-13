@@ -14,7 +14,15 @@ chai.use(chaiBnEqual);
 chai.use(chaiAsPromised);
 chai.should();
 
-const token = require("./helpers/token").underlying;
+const usedToken = require("./helpers/token").token;
+const borrowedToken = require("./helpers/token").borrowing;
+console.log(usedToken);
+
+const token = usedToken.underlying;
+const symbol = usedToken.symbol;
+const userAddress = usedToken.user;
+const depositNumber = usedToken.depositAmount;
+
 const tokens = require("./helpers/tokens");
 const contracts = require("./helpers/contracts");
 
@@ -29,12 +37,10 @@ async function deploy() {
   [owner, rebalancer] = await ethers.getSigners();
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: ["0x2bc812c70dcd634a07ce4fb9cd9ba4319fd9898d"],
+    params: [userAddress],
   });
 
-  user = await ethers.provider.getSigner(
-    "0x2bc812c70dcd634a07ce4fb9cd9ba4319fd9898d"
-  );
+  user = await ethers.provider.getSigner(userAddress);
 
   //prettier-ignore
   const RariFundManager = await ethers.getContractFactory("RariFundManager");
@@ -57,7 +63,7 @@ async function deploy() {
 
   for (let i = 0; i < tokens.length; i++) {
     await rariFundController
-      .newTank(tokens[i].token, tokens[i].decimals)
+      .newTank(tokens[i].token, borrowedToken, tokens[i].decimals)
       .catch((error) => console.log(error));
   }
 }
@@ -65,6 +71,7 @@ async function deploy() {
 describe("RariFundManager", async () => {
   before(async () => {
     await deploy().catch((error) => console.log(error));
+    console.log("Token Used: ", usedToken.symbol);
   });
 
   it("Reverts if the currency is not supported", async () => {
@@ -72,28 +79,27 @@ describe("RariFundManager", async () => {
   });
 
   it("Sends funds to the RariFundTank", async () => {
+    console.log(token);
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
-    const depositNumber = "2000000000000000000000";
 
     await tokenContract
       .connect(user)
       .approve(rariFundController.address, depositNumber);
 
-    await rariFundManager.connect(user).deposit("ZRX", depositNumber);
+    await rariFundManager.connect(user).deposit(symbol, depositNumber);
     await rariFundController
       .getTotalTokensLocked(token)
-      .should.eventually.bnEqual(depositNumber);
+      .should.eventually.equal(depositNumber);
   });
 
   it("Reverts if deposit amount is too low", async () => {
     // Note that DAI, which is being used in this example is pegged to 1 USD
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
-    const depositNumber = "100";
 
-    await tokenContract.approve(rariFundController.address, depositNumber);
+    await tokenContract.approve(rariFundController.address, 1);
     await rariFundManager
       .connect(user)
-      .deposit("ZRX", depositNumber)
+      .deposit(symbol, 1)
       .should.be.rejectedWith("revert");
   });
 });
