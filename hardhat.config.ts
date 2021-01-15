@@ -1,5 +1,8 @@
+import { version } from "os";
+
 require("@nomiclabs/hardhat-waffle");
 require("solidity-coverage");
+const removeConsoleLog = require("hardhat-preprocessor");
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -14,5 +17,11 @@ module.exports = {
       },
     },
   },
-  solidity: "0.7.3",
+  compilers: [{ version: "0.7.3" }, { version: "0.6.6" }],
+  preprocess: {
+    eachLine: removeConsoleLog(
+      (bre: any) =>
+        bre.network.name !== "hardhat" && bre.network.name !== "localhost"
+    ),
+  },
 };
