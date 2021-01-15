@@ -50,6 +50,18 @@ library CompoundPoolController {
     }
 
     /**
+        @dev Withdraws funds from Compound
+        @param underlying The address of the underlying asset
+        @param amount The amount to be withdrew
+    */
+    function withdraw(address underlying, uint256 amount) internal {
+        ICErc20 cToken = ICErc20(getCErc20Contract(underlying));
+
+        uint256 error = cToken.redeemUnderlying(amount);
+        require(error != 0, "CompoundPoolController: CToken redeem error");
+    }
+
+    /**
         @dev Given the address of an ERC20 token, borrow a certain amount from Compound
         @param underlying The address of the underlying asset
         @param amount The amount to be borrowed

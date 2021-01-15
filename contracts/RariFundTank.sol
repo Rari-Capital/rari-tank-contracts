@@ -7,6 +7,8 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "@uniswap/v2-periphery/contracts/UniswapV2Router02.sol";
+
 contract RariFundTank is Ownable {
     using SafeMath for uint256;
     //using RariPoolController for address;
@@ -29,6 +31,9 @@ contract RariFundTank is Ownable {
 
     ///@dev The address of the Rari Stable Pool Fund Manager
     address private rariStablePool;
+
+    ///@dev The address of the SushiswapRouter
+    address private sushiswapRouter;
 
     ///@dev The total cToken balance
     uint256 private totalCTokenBalance;
@@ -56,6 +61,7 @@ contract RariFundTank is Ownable {
         comptroller = _comptroller;
         priceFeed = _priceFeed;
         rariStablePool = _rariStablePool;
+        sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
     }
 
     ///@dev An array of addresses whose funds have yet to be converted to cTokens
@@ -96,7 +102,6 @@ contract RariFundTank is Ownable {
 
     function withdraw(address account, uint256 amount) external onlyOwner() {
         uint256 cTokenBalance = cTokenBalances[account];
-        uint256 interestEarned = usdProfit[account];
         uint256 depositedFunds =
             CompoundPoolController.getCTokensToUnderlying(
                 supportedToken,
@@ -104,6 +109,10 @@ contract RariFundTank is Ownable {
                 cTokenBalance
             );
         uint256 dormantFunds = unusedDepositBalances[dataVersionNumber][account];
+
+        // Withdraw funds from protocols
+        withdrawFunds(account, amount, dormantFunds, usdProfit[account], depositedFunds);
+        IERC20(supportedToken).approve(account, amount);
     }
 
     /**
@@ -259,6 +268,8 @@ contract RariFundTank is Ownable {
 
         // Allocate funds that have been deposited into Compound
         RariPoolController.withdraw(rariStablePool, "USDC", repayAmount);
+        CompoundPoolController.repayBorrow(borrowToken, repayAmount);
+        CompoundPoolController.withdraw(supportedToken, leftAmount);
     }
 
     function borrow(
@@ -277,5 +288,15 @@ contract RariFundTank is Ownable {
     ) private {
         RariPoolController.withdraw(rariStablePool, currencyCode, amount);
         CompoundPoolController.repayBorrow(erc20Contract, amount);
+    }
+
+    function swapInterestForUnderlying(uint256 amount) private {
+        IERC20(borrowToken).approve(sushiswapRouter, amount);
+        UniswapV2Router02(sushiswapRouter).swapTokensForExactTokens(
+            amount,
+            0,
+            [borrowToken, supportedToken],
+            now
+        );
     }
 }
