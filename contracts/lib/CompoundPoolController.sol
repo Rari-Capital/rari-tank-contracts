@@ -17,16 +17,17 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 library CompoundPoolController {
     using SafeMath for uint256;
 
+    //@dev The address of Compound's Comptroller
+    address constant comptrollerContract = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
+
     /**
         @dev Deposits collateral into Compound
         @param underlying The address of the underlying asset
         @param amount The amount of the asset being supplied
-        @param comptrollerContract The address of Compound's Comptroller
     */
     function deposit(
         address underlying,
-        uint256 amount,
-        address comptrollerContract
+        uint256 amount
     ) internal {
         require(amount > 0, "CompoundPoolController: Amount must be greater than 0");
 
@@ -77,111 +78,10 @@ library CompoundPoolController {
     function repayBorrow(address underlying, uint256 amount) internal {
         address cErc20Contract = getCErc20Contract(underlying);
         IERC20(underlying).approve(cErc20Contract, amount);
-
         uint256 error = ICErc20(getCErc20Contract(underlying)).repayBorrow(amount);
 
         require(error == 0, "CompoundPoolController: Compound Repay Error");
     }
-
-    /**
-        @dev Get 
-        @param underlying The address of the underlying ERC20 contract
-        @param amount The amount of underlying tokens
-        @param comptrollerContract The address of Compound's Comptroller
-        @param priceFeedContract The address of Compound's PriceFeed
-    */
-    function getMaxUSDBorrowAmount(
-        address underlying,
-        uint256 amount,
-        address comptrollerContract,
-        address priceFeedContract
-    ) internal view returns (uint256) {
-        IComptroller comptroller = IComptroller(comptrollerContract);
-        address cerc20Contract = getCErc20Contract(underlying);
-        IPriceFeed priceFeed = IPriceFeed(priceFeedContract);
-        
-        //(, uint256 liquidity, ) = comptroller.getAccountLiquidity(address(this));
-
-        uint256 price = priceFeed.getUnderlyingPrice(cerc20Contract);
-
-        uint256 usdBalance = amount.mul(price).div(1e18);
-        (, uint256 collateralFactorMantissa, ) = comptroller.markets(cerc20Contract);
-
-        return usdBalance.mul(collateralFactorMantissa).div(1e18);
-    }
-
-
-    /**
-        @dev Given a USD amount, calculate the maximum borrow amount with that sum
-        @param underlying The address of the underlying ERC20 contract
-        @param usdAmount The USD value available
-        @param priceFeedContract The address of Compound's PriceFeed
-    */
-    function getUSDToUnderlying (
-        address underlying,
-        uint256 usdAmount,
-        address priceFeedContract
-    ) internal view returns (uint256) {
-        address cErc20Contract = getCErc20Contract(underlying);
-        IPriceFeed priceFeed = IPriceFeed(priceFeedContract);
-
-        //Get the price of the underlying asset
-        uint256 underlyingPrice = priceFeed.getUnderlyingPrice(cErc20Contract);
-        return usdAmount.mul(1e18).div(underlyingPrice);
-    }
-
-    /**
-        @dev Use the exchange rate to convert from CErc20 to Erc20 values
-        @param underlying The address of the underlying ERC20 contract
-        @param amount The amount of underlying tokens
-     */
-    function getUnderlyingToCTokens(address underlying, uint256 amount) internal returns (uint256) {
-        uint256 exchangeRate = ICErc20(getCErc20Contract(underlying)).exchangeRateCurrent();
-        uint256 mintAmount = amount.mul(1e18).div(exchangeRate);
-
-        return mintAmount;
-    }
-
-
-    /**
-        @dev Use the exchange rate to convert fromn CErc20 to Erc20 Values
-        @param underlying The address of the underlying ERC20 contract
-        @param amount The amount of underlying tokens
-    */
-    function getCTokensToUnderlying(address underlying, uint256 amount) internal returns (uint256) {
-        uint256 exchangeRate = ICErc20(getCErc20Contract(underlying)).exchangeRateCurrent();
-        return exchangeRate.mul(amount).div(1e18);
-    }
-
-    /**
-        @dev Retrieve the borrowed balance for the contract
-        @param underlying The address of the underlying ERC20 contract
-     */
-    function borrowBalanceCurrent(address underlying) internal returns (uint256) {
-        return ICErc20(getCErc20Contract(underlying)).borrowBalanceCurrent(address(this));
-    }
-
-    /**
-    @dev Get the underlying price of the asset scaled by 1e18
-    @param underlying The address of the underlying ERC20 contract
-    @param priceFeedContract The address of Compound's PriceFeed
-    */
-    function getUnderlyingPrice(address underlying, address priceFeedContract) internal view returns (uint256) {
-        return IPriceFeed(priceFeedContract).getUnderlyingPrice(getCErc20Contract(underlying));
-    }
-
-    /**
-        @dev Use the exchange rate to calculate the USD price of x tokens
-        @param underlying The address of the underlying ERC20 contract
-        @param amount The amount of underlying tokens
-        @param priceFeedContract The address of Compound's PriceFeed
-    */
-    function getPrice(address underlying, uint256 amount, address priceFeedContract) internal view returns (uint256) {
-        uint256 price = getUnderlyingPrice(underlying, priceFeedContract);
-        return price.mul(amount).div(1e18);
-    }
-
-
 
     /**
         @dev Returns a token's cToken contract address given its ERC20 contract address.

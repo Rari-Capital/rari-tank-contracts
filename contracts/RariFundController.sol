@@ -18,6 +18,9 @@ contract RariFundController is Ownable {
     ///@dev The address of the RariFundManager
     address private rariFundManager;
 
+    ///@dev
+    address private rariDataProvider;
+
     ///@dev The address of the rebalancer
     address private fundRebalancer;
 
@@ -27,27 +30,19 @@ contract RariFundController is Ownable {
     ///@dev Maps currency to tank address
     mapping(address => address) rariFundTankTokens;
 
-    ///@dev Compound's Comptroller Contract
-    address private comptroller;
-
-    ///@dev Compound's Pricefeed program
-    address private priceFeed;
-
     ///@dev The address of the Rari Stable Pool Fund Manager
     address private rariStablePool;
 
     constructor(
         address _rariFundManager,
         address _fundRebalancer,
-        address _comptroller,
-        address _priceFeed,
-        address _rariStablePool
+        address _rariStablePool,
+        address _rariDataProvider
     ) {
         rariFundManager = _rariFundManager;
         fundRebalancer = _fundRebalancer;
-        comptroller = _comptroller;
-        priceFeed = _priceFeed;
         rariStablePool = _rariStablePool;
+        rariDataProvider = _rariDataProvider;
     }
 
     modifier onlyRariFundManager() {
@@ -74,14 +69,13 @@ contract RariFundController is Ownable {
         external
         onlyOwner()
     {
-        RariFundTank tank =
-            new RariFundTank(
-                erc20Contract,
-                erc20BorrowContract,
-                comptroller,
-                priceFeed,
-                rariStablePool
-            );
+        //prettier-ignore
+        RariFundTank tank = new RariFundTank(
+            erc20Contract,
+            erc20BorrowContract,
+            rariStablePool,
+            rariDataProvider            
+        );
         rariFundTanks.push(address(tank));
         rariFundTankTokens[erc20Contract] = address(tank);
     }

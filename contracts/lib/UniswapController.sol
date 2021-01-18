@@ -7,10 +7,10 @@ import "../external/uniswapv2/UniswapV2Library.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-library SushiswapController {
+library UniswapController {
     using SafeERC20 for IERC20;
 
-    address constant factory = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    address constant factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     function swapTokens(address[] memory path, uint256 amount) internal {
         require(amount > 0, "SushiswapController: Amount cannot be 0");

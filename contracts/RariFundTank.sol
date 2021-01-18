@@ -1,8 +1,10 @@
 pragma solidity ^0.7.0;
 
+import "./RariDataProvider.sol";
+
 import "./lib/CompoundPoolController.sol";
 import "./lib/RariPoolController.sol";
-import "./lib/SushiswapController.sol";
+import "./lib/UniswapController.sol";
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -19,17 +21,14 @@ contract RariFundTank is Ownable {
     ///@dev The address of the ERC20Token to be borrowed
     address private borrowToken;
 
-    ///@dev Compound's Comptroller Contract
-    address private comptroller;
-
-    ///@dev Compound's Pricefeed program
-    address private priceFeed;
-
     ///@dev The address of the Rari Stable Pool Fund Manager
     address private rariStablePool;
 
     ///@dev The address of the SushiswapRouter
     address private sushiswapRouter;
+
+    ///@dev The RariDataProvider Contract
+    RariDataProvider private rariDataProvider;
 
     ///@dev The total cToken balance
     uint256 private totalCTokenBalance;
@@ -46,17 +45,15 @@ contract RariFundTank is Ownable {
     constructor(
         address _supportedToken,
         address _borrowToken,
-        address _comptroller,
-        address _priceFeed,
-        address _rariStablePool
+        address _rariStablePool,
+        address _rariDataProvider
     ) Ownable() {
         supportedToken = _supportedToken;
         borrowToken = _borrowToken;
-        comptroller = _comptroller;
-        priceFeed = _priceFeed;
         rariStablePool = _rariStablePool;
-
         sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+
+        rariDataProvider = RariDataProvider(_rariDataProvider);
     }
 
     ///@dev An array of addresses whose funds have yet to be converted to cTokens
@@ -84,9 +81,7 @@ contract RariFundTank is Ownable {
     */
     function deposit(address account, uint256 amount) external onlyOwner() {
         require(
-            CompoundPoolController.getPrice(supportedToken, amount, priceFeed).div(
-                1e18
-            ) >= 500,
+            rariDataProvider.getPrice(supportedToken, amount).div(1e18) >= 500,
             "RariFundTank: Deposit amount must be over 500 dollars"
         );
         //prettier-ignore
@@ -98,7 +93,7 @@ contract RariFundTank is Ownable {
     function withdraw(address account, uint256 amount) external onlyOwner() {
         uint256 cTokenBalance = cTokenBalances[account];
         uint256 depositedFunds =
-            CompoundPoolController.getCTokensToUnderlying(supportedToken, cTokenBalance);
+            rariDataProvider.getCTokensToUnderlying(supportedToken, cTokenBalance);
         uint256 dormantFunds = unusedDepositBalances[dataVersionNumber][account];
 
         // Withdraw funds from protocols
@@ -162,20 +157,20 @@ contract RariFundTank is Ownable {
             //prettier-ignore
             uint256 amount = unusedDepositBalances[dataVersionNumber][account];
             uint256 cTokenAmount =
-                CompoundPoolController.getUnderlyingToCTokens(supportedToken, amount);
+                rariDataProvider.getUnderlyingToCTokens(supportedToken, amount);
             cTokenBalances[account] = cTokenAmount;
             totalCTokenBalance += cTokenAmount;
 
             if (!previouslyDeposited[account]) deposited.push(account);
         }
         // Deposit the total unused balance into Compound
-        CompoundPoolController.deposit(supportedToken, totalUnusedBalance, comptroller);
+        CompoundPoolController.deposit(supportedToken, totalUnusedBalance);
         // Calculate the total borrow amount
         //prettier-ignore
-        uint256 usdBorrowAmount = CompoundPoolController.getMaxUSDBorrowAmount(supportedToken, totalUnusedBalance, comptroller, priceFeed);
+        uint256 usdBorrowAmount = rariDataProvider.getMaxUSDBorrowAmount(supportedToken, totalUnusedBalance);
         //prettier-ignore
-        uint256 borrowAmount = CompoundPoolController.getUSDToUnderlying(borrowToken, usdBorrowAmount, priceFeed).div(2);
-        uint256 borrowBalance = CompoundPoolController.borrowBalanceCurrent(borrowToken);
+        uint256 borrowAmount = rariDataProvider.getUSDToUnderlying(borrowToken, usdBorrowAmount).div(2);
+        uint256 borrowBalance = rariDataProvider.borrowBalanceCurrent(borrowToken);
 
         //prettier-ignore
         if (borrowAmount > borrowBalance) borrow(borrowToken, currencyCode, borrowAmount - borrowBalance);
@@ -199,11 +194,7 @@ contract RariFundTank is Ownable {
         uint256 depositedFunds
     ) private {
         uint256 interestInUnderlying =
-            CompoundPoolController.getUSDToUnderlying(
-                supportedToken,
-                interestEarned,
-                priceFeed
-            );
+            rariDataProvider.getUSDToUnderlying(supportedToken, interestEarned);
 
         uint256 underlyingBalance =
             depositedFunds.add(dormantFunds).add(interestInUnderlying);
@@ -244,17 +235,10 @@ contract RariFundTank is Ownable {
 
         // Calculate the USD amount to be returned
         uint256 usdRepayAmount =
-            CompoundPoolController.getMaxUSDBorrowAmount(
-                supportedToken,
-                leftAmount,
-                comptroller,
-                priceFeed
-            );
+            rariDataProvider.getMaxUSDBorrowAmount(supportedToken, leftAmount);
 
         uint256 repayAmount =
-            CompoundPoolController
-                .getUSDToUnderlying(borrowToken, usdRepayAmount, priceFeed)
-                .div(2);
+            rariDataProvider.getUSDToUnderlying(borrowToken, usdRepayAmount).div(2);
 
         // Allocate funds that have been deposited into Compound
         RariPoolController.withdraw(rariStablePool, "USDC", repayAmount);
@@ -298,7 +282,7 @@ contract RariFundTank is Ownable {
         path[0] = borrowToken;
         path[1] = supportedToken;
 
-        //SushiswapController.swapTokens(path, amount);
+        UniswapController.swapTokens(path, amount);
 
         // IUniswapV2Router02(sushiswapRouter).swapExactTokensForTokens(
         //     amount,

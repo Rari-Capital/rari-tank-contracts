@@ -45,6 +45,11 @@ async function deploy() {
   const RariFundManager = await ethers.getContractFactory("RariFundManager");
   //prettier-ignore
   const RariFundController = await ethers.getContractFactory("RariFundController");
+  //prettier-ignore
+  const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
+
+  rariDataProvider = await RariDataProvider.deploy();
+  await rariDataProvider.deployed();
 
   rariFundManager = await RariFundManager.deploy();
   await rariFundManager.deployed();
@@ -52,9 +57,8 @@ async function deploy() {
   rariFundController = await RariFundController.deploy(
     rariFundManager.address,
     rebalancer.address,
-    contracts.comptroller,
-    contracts.priceFeed,
-    contracts.rariFundManager
+    contracts.rariFundManager,
+    rariDataProvider.address
   );
   await rariFundController.deployed();
 

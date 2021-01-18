@@ -18,10 +18,10 @@ module.exports = {
     },
   },
   compilers: [{ version: "0.7.3" }, { version: "0.6.6" }],
-  preprocess: {
-    eachLine: removeConsoleLog(
-      (bre: any) =>
-        bre.network.name !== "hardhat" && bre.network.name !== "localhost"
-    ),
-  },
+  // preprocess: {
+  //   eachLine: removeConsoleLog(
+  //     (bre: any) =>
+  //       bre.network.name !== "hardhat" && bre.network.name !== "localhost"
+  //   ),
+  // },
 };
