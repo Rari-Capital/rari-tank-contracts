@@ -16,7 +16,6 @@ chai.should();
 
 const usedToken = require("./helpers/token").token;
 const borrowedToken = require("./helpers/token").borrowing;
-console.log(usedToken);
 
 const token = usedToken.underlying;
 const symbol = usedToken.symbol;
@@ -63,15 +62,17 @@ async function deploy() {
 
   for (let i = 0; i < tokens.length; i++) {
     await rariFundController
-      .newTank(tokens[i].token, borrowedToken, tokens[i].decimals)
+      .newTank(tokens[i].token, borrowedToken)
       .catch((error) => console.log(error));
   }
 }
 
+console.log("\n");
+console.log("Token Chosen at Random: ", usedToken.symbol);
+
 describe("RariFundManager", async () => {
   before(async () => {
     await deploy().catch((error) => console.log(error));
-    console.log("Token Used: ", usedToken.symbol);
   });
 
   it("Reverts if the currency is not supported", async () => {
@@ -79,7 +80,6 @@ describe("RariFundManager", async () => {
   });
 
   it("Sends funds to the RariFundTank", async () => {
-    console.log(token);
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
 
     await tokenContract
@@ -88,7 +88,7 @@ describe("RariFundManager", async () => {
 
     await rariFundManager.connect(user).deposit(symbol, depositNumber);
     await rariFundController
-      .getTotalTokensLocked(token)
+      .getDormantFunds(token)
       .should.eventually.equal(depositNumber);
   });
 
@@ -96,7 +96,7 @@ describe("RariFundManager", async () => {
     // Note that DAI, which is being used in this example is pegged to 1 USD
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
 
-    await tokenContract.approve(rariFundController.address, 1);
+    await tokenContract.approve(rariFundManager.address, 2);
     await rariFundManager
       .connect(user)
       .deposit(symbol, 1)

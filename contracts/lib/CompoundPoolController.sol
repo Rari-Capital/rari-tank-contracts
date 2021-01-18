@@ -75,7 +75,11 @@ library CompoundPoolController {
     }
 
     function repayBorrow(address underlying, uint256 amount) internal {
+        address cErc20Contract = getCErc20Contract(underlying);
+        IERC20(underlying).approve(cErc20Contract, amount);
+
         uint256 error = ICErc20(getCErc20Contract(underlying)).repayBorrow(amount);
+
         require(error == 0, "CompoundPoolController: Compound Repay Error");
     }
 
@@ -131,7 +135,7 @@ library CompoundPoolController {
         @param underlying The address of the underlying ERC20 contract
         @param amount The amount of underlying tokens
      */
-    function getUnderlyingToCTokens(address underlying, uint256 decimals, uint256 amount) internal returns (uint256) {
+    function getUnderlyingToCTokens(address underlying, uint256 amount) internal returns (uint256) {
         uint256 exchangeRate = ICErc20(getCErc20Contract(underlying)).exchangeRateCurrent();
         uint256 mintAmount = amount.mul(1e18).div(exchangeRate);
 
@@ -144,7 +148,7 @@ library CompoundPoolController {
         @param underlying The address of the underlying ERC20 contract
         @param amount The amount of underlying tokens
     */
-    function getCTokensToUnderlying(address underlying, uint256 decimals, uint256 amount) internal returns (uint256) {
+    function getCTokensToUnderlying(address underlying, uint256 amount) internal returns (uint256) {
         uint256 exchangeRate = ICErc20(getCErc20Contract(underlying)).exchangeRateCurrent();
         return exchangeRate.mul(amount).div(1e18);
     }
@@ -184,12 +188,10 @@ library CompoundPoolController {
         @param underlying The address of the underlying asset 
     */
     function getCErc20Contract(address underlying) private pure returns (address) {
-        if (underlying == 0x0D8775F648430679A709E98d2b0Cb6250d2887EF) return 0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E; // BAT => cBAT
         if (underlying == 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984) return 0x35A18000230DA775CAc24873d00Ff85BccdeD550; // UNI => cUNI
         if (underlying == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48) return 0x39AA39c021dfbaE8faC545936693aC917d5E7563; // USDC => cUSDC
         if (underlying == 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) return 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4; // WBTC => cWBTC
         if (underlying == 0xE41d2489571d322189246DaFA5ebDe1F4699F498) return 0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407; // ZRX => cZRX
         else revert("CompoundPoolController: Supported cToken address not found for this token address");
     }
-
 }

@@ -1,6 +1,7 @@
 pragma solidity ^0.7.0;
 
 import "./RariFundTank.sol";
+import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -69,16 +70,14 @@ contract RariFundController is Ownable {
         @dev Deploys a new RariFundTank and store it in the contract
         @param erc20Contract The address of the ERC20 token to be supported by the tank
     */
-    function newTank(
-        address erc20Contract,
-        address erc20BorrowContract,
-        uint256 decimals
-    ) external onlyOwner() {
+    function newTank(address erc20Contract, address erc20BorrowContract)
+        external
+        onlyOwner()
+    {
         RariFundTank tank =
             new RariFundTank(
                 erc20Contract,
                 erc20BorrowContract,
-                decimals,
                 comptroller,
                 priceFeed,
                 rariStablePool
@@ -126,17 +125,15 @@ contract RariFundController is Ownable {
     /**
         @dev Deposit the tanks' unused funds into Compound
     */
-    function rebalance() external onlyFundRebalancer() {
-        for (uint256 i = 0; i < rariFundTanks.length; i++) {
-            RariFundTank tank = RariFundTank(rariFundTanks[i]);
-            tank.rebalance();
-        }
+    function rebalance(address erc20Contract) external onlyFundRebalancer() {
+        RariFundTank tank = RariFundTank(rariFundTankTokens[erc20Contract]);
+        tank.rebalance();
     }
 
     /**
         @dev Get the total amount of tokens locked in the contract
     */
-    function getTotalTokensLocked(address erc20Contract) external view returns (uint256) {
+    function getDormantFunds(address erc20Contract) external view returns (uint256) {
         return IERC20(erc20Contract).balanceOf(rariFundTankTokens[erc20Contract]);
     }
 }
