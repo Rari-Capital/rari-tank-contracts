@@ -1,7 +1,6 @@
 pragma solidity ^0.7.0;
 
 import "./RariFundController.sol";
-import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";

@@ -1,7 +1,5 @@
 pragma solidity ^0.7.0;
 
-import "hardhat/console.sol";
-
 import "../external/compound/ICErc20.sol";
 import "../external/compound/IComptroller.sol";
 import "../external/compound/IPriceFeed.sol";

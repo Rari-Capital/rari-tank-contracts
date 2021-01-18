@@ -5,7 +5,6 @@ import "./RariDataProvider.sol";
 import "./lib/CompoundPoolController.sol";
 import "./lib/RariPoolController.sol";
 import "./lib/UniswapController.sol";
-import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -23,9 +22,6 @@ contract RariFundTank is Ownable {
 
     ///@dev The address of the Rari Stable Pool Fund Manager
     address private rariStablePool;
-
-    ///@dev The address of the SushiswapRouter
-    address private sushiswapRouter;
 
     ///@dev The RariDataProvider Contract
     RariDataProvider private rariDataProvider;
@@ -51,7 +47,6 @@ contract RariFundTank is Ownable {
         supportedToken = _supportedToken;
         borrowToken = _borrowToken;
         rariStablePool = _rariStablePool;
-        sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 
         rariDataProvider = RariDataProvider(_rariDataProvider);
     }
@@ -132,7 +127,6 @@ contract RariFundTank is Ownable {
         @param amount The amount to split
     */
     function split(uint256 amount) private {
-        console.log(amount, "profit");
         //gas saving
         uint256 totalBalance = totalCTokenBalance;
 
@@ -270,26 +264,9 @@ contract RariFundTank is Ownable {
     }
 
     function swapInterestForUnderlying(uint256 amount) private {
-        // function swapExactTokensForTokens(
-        //     uint amountIn,
-        //     uint amountOutMin,
-        //     address[] calldata path,
-        //     address to,
-        //     uint deadline
-        // ) external returns (uint[] memory amounts);
-
         address[] memory path = new address[](2);
         path[0] = borrowToken;
         path[1] = supportedToken;
-
         UniswapController.swapTokens(path, amount);
-
-        // IUniswapV2Router02(sushiswapRouter).swapExactTokensForTokens(
-        //     amount,
-        //     0,
-        //     path,
-        //     address(this),
-        //     block.timestamp
-        // );
     }
 }
