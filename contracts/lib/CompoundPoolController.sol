@@ -4,8 +4,6 @@ import "../external/compound/ICErc20.sol";
 import "../external/compound/IComptroller.sol";
 import "../external/compound/IPriceFeed.sol";
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

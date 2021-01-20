@@ -3,7 +3,6 @@ pragma solidity ^0.7.0;
 import "./interfaces/IRariDataProvider.sol";
 import "./interfaces/IRariFundTank.sol";
 import "./interfaces/IRariTankToken.sol";
-import "hardhat/console.sol";
 
 import {CompoundPoolController} from "./lib/CompoundPoolController.sol";
 import {RariPoolController} from "./lib/RariPoolController.sol";
@@ -113,9 +112,6 @@ contract RariFundTank is IRariFundTank, Ownable {
         uint256 tankTokenAmount = amount.mul(10**mantissa).div(exchangeRate);
         uint256 tankTokenBalance = IRariTankToken(rariTankToken).balanceOf(account);
 
-        console.log(tankTokenAmount);
-        console.log(tankTokenBalance);
-
         require(
             tankTokenBalance >= tankTokenAmount,
             "RariFundTank: Amount exceeds balance!"
@@ -132,17 +128,11 @@ contract RariFundTank is IRariFundTank, Ownable {
         uint256 profit;
         uint256 currentPoolBalance = RariPoolController.getUSDBalance();
 
-        console.log(currentPoolBalance);
-        console.log(stablePoolBalance);
-
         if (currentPoolBalance > stablePoolBalance)
             profit = currentPoolBalance.sub(stablePoolBalance).div(1e12);
 
-        console.log(profit);
-
         if (profit > 0) split(profit);
         if (totalUnusedBalance > 0) depositUnusedFunds("USDC");
-        console.log("Exchange Rate", getTokenExchangeRate());
 
         delete unusedDeposits;
         delete totalUnusedBalance;
@@ -160,10 +150,6 @@ contract RariFundTank is IRariFundTank, Ownable {
                 .add(totalUnusedBalance)
                 .mul(10**mantissa);
         uint256 totalSupply = IERC20(rariTankToken).totalSupply();
-
-        console.log("Balance", balance);
-        console.log("Total Supply", totalSupply);
-        console.log("tingus", CompoundPoolController.balanceOfUnderlying(supportedToken));
 
         if (balance == 0 || totalSupply == 0) return 1e18;
         return balance.mul(1e18).div(totalSupply);
@@ -190,8 +176,7 @@ contract RariFundTank is IRariFundTank, Ownable {
     function depositUnusedFunds(string memory currencyCode) private {
         // Deposit the total unused balance into Compound
         CompoundPoolController.deposit(supportedToken, totalUnusedBalance);
-        console.log(totalUnusedBalance);
-        console.log("sheebs", CompoundPoolController.balanceOfUnderlying(supportedToken));
+
         // Calculate the total borrow amount
         //prettier-ignore
         uint256 usdBorrowAmount = rariDataProvider.getMaxUSDBorrowAmount(supportedToken, totalUnusedBalance);

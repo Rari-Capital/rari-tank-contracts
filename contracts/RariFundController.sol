@@ -1,7 +1,7 @@
 pragma solidity ^0.7.0;
 
 import {RariFundTank} from "./RariFundTank.sol";
-import "hardhat/console.sol";
+
 import "./interfaces/IRariTankToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
