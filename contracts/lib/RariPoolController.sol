@@ -25,6 +25,6 @@ library RariPoolController {
     }
 
     function getUSDBalance() internal returns (uint256) {
-        return IRariFundManager(rariFundManager).balanceOf(address(this)).div(1e12);
+        return IRariFundManager(rariFundManager).balanceOf(address(this));
     }
 }

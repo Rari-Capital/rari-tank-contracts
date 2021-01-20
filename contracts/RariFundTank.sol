@@ -107,14 +107,18 @@ contract RariFundTank is IRariFundTank, Ownable {
         onlyOwner()
         returns (address, uint256)
     {
-        uint256 mantissa = 18 - decimals;
+        uint256 mantissa = 36 - decimals;
         uint256 exchangeRate = getTokenExchangeRate();
 
-        uint256 tankTokenAmount = amount.mul(10**mantissa).mul(exchangeRate).div(1e18);
+        uint256 tankTokenAmount = amount.mul(10**mantissa).div(exchangeRate);
         uint256 tankTokenBalance = IRariTankToken(rariTankToken).balanceOf(account);
+
+        console.log(tankTokenAmount);
+        console.log(tankTokenBalance);
+
         require(
             tankTokenBalance >= tankTokenAmount,
-            "RariFundTank: Amount exceeds balance"
+            "RariFundTank: Amount exceeds balance!"
         );
         _withdraw(amount);
 
@@ -128,11 +132,17 @@ contract RariFundTank is IRariFundTank, Ownable {
         uint256 profit;
         uint256 currentPoolBalance = RariPoolController.getUSDBalance();
 
+        console.log(currentPoolBalance);
+        console.log(stablePoolBalance);
+
         if (currentPoolBalance > stablePoolBalance)
             profit = currentPoolBalance.sub(stablePoolBalance).div(1e12);
 
-        if (profit > 10**6) split(profit);
+        console.log(profit);
+
+        if (profit > 0) split(profit);
         if (totalUnusedBalance > 0) depositUnusedFunds("USDC");
+        console.log("Exchange Rate", getTokenExchangeRate());
 
         delete unusedDeposits;
         delete totalUnusedBalance;
@@ -145,22 +155,18 @@ contract RariFundTank is IRariFundTank, Ownable {
     function getTokenExchangeRate() public override returns (uint256) {
         uint256 mantissa = 18 - decimals;
         uint256 balance =
-            rariDataProvider
-                .balanceOfUnderlying(supportedToken, address(this))
+            CompoundPoolController
+                .balanceOfUnderlying(supportedToken)
                 .add(totalUnusedBalance)
                 .mul(10**mantissa);
         uint256 totalSupply = IERC20(rariTankToken).totalSupply();
 
+        console.log("Balance", balance);
+        console.log("Total Supply", totalSupply);
+        console.log("tingus", CompoundPoolController.balanceOfUnderlying(supportedToken));
+
         if (balance == 0 || totalSupply == 0) return 1e18;
         return balance.mul(1e18).div(totalSupply);
-    }
-
-    /**
-        @dev Return the given user's interest earned in USD
-        @param account The address of the user
-    */
-    function getInterestEarned(address account) external view returns (uint256) {
-        return usdProfit[account];
     }
 
     /**
@@ -184,6 +190,8 @@ contract RariFundTank is IRariFundTank, Ownable {
     function depositUnusedFunds(string memory currencyCode) private {
         // Deposit the total unused balance into Compound
         CompoundPoolController.deposit(supportedToken, totalUnusedBalance);
+        console.log(totalUnusedBalance);
+        console.log("sheebs", CompoundPoolController.balanceOfUnderlying(supportedToken));
         // Calculate the total borrow amount
         //prettier-ignore
         uint256 usdBorrowAmount = rariDataProvider.getMaxUSDBorrowAmount(supportedToken, totalUnusedBalance);

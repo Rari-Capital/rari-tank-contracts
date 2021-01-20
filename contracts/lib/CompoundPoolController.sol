@@ -4,6 +4,8 @@ import "../external/compound/ICErc20.sol";
 import "../external/compound/IComptroller.sol";
 import "../external/compound/IPriceFeed.sol";
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -79,6 +81,13 @@ library CompoundPoolController {
         uint256 error = ICErc20(getCErc20Contract(underlying)).repayBorrow(amount);
 
         require(error == 0, "CompoundPoolController: Compound Repay Error");
+    }
+
+    /**
+        @dev Get the balanceOfUnderlying
+    */
+    function balanceOfUnderlying(address underlying) internal returns(uint256) {
+        return ICErc20(getCErc20Contract(underlying)).balanceOfUnderlying(address(this));
     }
 
     /**

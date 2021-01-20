@@ -1,5 +1,3 @@
-import { version } from "os";
-
 require("@nomiclabs/hardhat-waffle");
 require("solidity-coverage");
 const removeConsoleLog = require("hardhat-preprocessor");

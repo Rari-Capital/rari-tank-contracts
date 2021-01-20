@@ -8,7 +8,6 @@ chai.use(chaiAsPromised);
 chai.should();
 
 const tokenAddresses = require("./helpers/token");
-
 const usedToken = tokenAddresses.token;
 
 const token = usedToken.underlying;
@@ -127,10 +126,16 @@ describe("RariFundController, RariFundTanks", async () => {
         tankToken
       );
 
+      for (i = 0; i < 30000; i++) {
+        await hre.network.provider.request({
+          method: "evm_mine",
+        });
+      }
+
       await rariFundController.connect(rebalancer).rebalance(token);
       tankTokenContract
         .connect(user)
-        .approve(rariFundController.address, `${depositNumber}00000000000000`);
+        .approve(rariFundController.address, `${depositNumber}00000000`);
       await rariFundManager.connect(user).withdraw(symbol, depositNumber);
     });
   });
