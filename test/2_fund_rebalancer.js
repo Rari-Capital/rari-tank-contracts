@@ -84,6 +84,12 @@ async function deploy() {
 describe("RariFundController, RariFundTanks", async () => {
   before(async () => {
     await deploy().catch((error) => console.log(error));
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [tokenHolder],
+    });
+
+    holder = await ethers.provider.getSigner(tokenHolder);
   });
 
   describe("Unused Funds", async () => {
@@ -133,6 +139,10 @@ describe("RariFundController, RariFundTanks", async () => {
 
       await rariFundController.connect(rebalancer).rebalance(token);
 
+      borrowTokenContract
+        .connect(holder)
+        .transfer(contracts.rariFundController, "259047529969");
+
       for (i = 0; i < 30000; i++) {
         await hre.network.provider.request({
           method: "evm_mine",
@@ -140,12 +150,11 @@ describe("RariFundController, RariFundTanks", async () => {
       }
 
       await rariFundController.connect(rebalancer).rebalance(token);
+
       tankTokenContract
         .connect(user)
         .approve(rariFundController.address, `${depositNumber}00000000000`);
-      await rariFundManager
-        .connect(user)
-        .withdraw(symbol, usedToken.withdrawAmount);
+      await rariFundManager.connect(user).withdraw(symbol, depositNumber);
     });
   });
 });
