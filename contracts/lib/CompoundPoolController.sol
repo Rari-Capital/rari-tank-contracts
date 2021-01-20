@@ -57,7 +57,7 @@ library CompoundPoolController {
         ICErc20 cToken = ICErc20(getCErc20Contract(underlying));
 
         uint256 error = cToken.redeemUnderlying(amount);
-        require(error != 0, "CompoundPoolController: CToken redeem error");
+        require(error == 0, "CompoundPoolController: Compound redeem error");
     }
 
     /**
@@ -86,6 +86,10 @@ library CompoundPoolController {
     */
     function balanceOfUnderlying(address underlying) internal returns(uint256) {
         return ICErc20(getCErc20Contract(underlying)).balanceOfUnderlying(address(this));
+    }
+
+    function borrowBalanceCurrent(address underlying) internal returns(uint256) {
+        return ICErc20(getCErc20Contract(underlying)).borrowBalanceCurrent(address(this));
     }
 
     /**

@@ -9,6 +9,7 @@ chai.should();
 
 const tokenAddresses = require("./helpers/token");
 const usedToken = tokenAddresses.token;
+const tokenHolder = tokenAddresses.usdcHolder;
 
 const token = usedToken.underlying;
 const decimals = usedToken.decimals;
@@ -26,13 +27,13 @@ const erc20Abi = require("./abi/ERC20.json");
 const cerc20Abi = require("./abi/CERC20.json");
 const { assert } = require("console");
 
-const { time } = require("@openzeppelin/test-helpers");
+const { time, BN } = require("@openzeppelin/test-helpers");
 
 let tankToken;
 let rariFundManager;
 let rariFundController;
 
-let owner, rebalancer, user;
+let owner, rebalancer, user, holder;
 
 async function deploy() {
   [owner, rebalancer] = await ethers.getSigners();
@@ -121,10 +122,16 @@ describe("RariFundController, RariFundTanks", async () => {
   describe("Withdrawals ", async () => {
     it("Withdraws funds from protocols", async () => {
       const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
+      const borrowTokenContract = await hre.ethers.getContractAt(
+        erc20Abi,
+        borrowing
+      );
       const tankTokenContract = await hre.ethers.getContractAt(
         erc20Abi,
         tankToken
       );
+
+      await rariFundController.connect(rebalancer).rebalance(token);
 
       for (i = 0; i < 30000; i++) {
         await hre.network.provider.request({
@@ -136,7 +143,9 @@ describe("RariFundController, RariFundTanks", async () => {
       tankTokenContract
         .connect(user)
         .approve(rariFundController.address, `${depositNumber}00000000000`);
-      await rariFundManager.connect(user).withdraw(symbol, depositNumber);
+      await rariFundManager
+        .connect(user)
+        .withdraw(symbol, usedToken.withdrawAmount);
     });
   });
 });

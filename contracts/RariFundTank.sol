@@ -117,6 +117,7 @@ contract RariFundTank is IRariFundTank, Ownable {
             "RariFundTank: Amount exceeds balance!"
         );
         _withdraw(amount);
+        IERC20(supportedToken).transfer(account, amount);
 
         return (rariTankToken, tankTokenAmount);
     }
@@ -131,7 +132,7 @@ contract RariFundTank is IRariFundTank, Ownable {
         if (currentPoolBalance > stablePoolBalance)
             profit = currentPoolBalance.sub(stablePoolBalance).div(1e12);
 
-        if (profit > 0) split(profit);
+        if (profit > 1e6) split(profit);
         if (totalUnusedBalance > 0) depositUnusedFunds("USDC");
 
         delete unusedDeposits;
