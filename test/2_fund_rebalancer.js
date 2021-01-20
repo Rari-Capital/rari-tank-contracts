@@ -135,7 +135,7 @@ describe("RariFundController, RariFundTanks", async () => {
       await rariFundController.connect(rebalancer).rebalance(token);
       tankTokenContract
         .connect(user)
-        .approve(rariFundController.address, `${depositNumber}00000000`);
+        .approve(rariFundController.address, `${depositNumber}00000000000`);
       await rariFundManager.connect(user).withdraw(symbol, depositNumber);
     });
   });
