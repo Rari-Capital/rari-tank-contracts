@@ -19,6 +19,7 @@ const borrowedToken = require("./helpers/token").borrowing;
 
 const token = usedToken.underlying;
 const symbol = usedToken.symbol;
+const decimals = usedToken.decimals;
 const userAddress = usedToken.user;
 const depositNumber = usedToken.depositAmount;
 
@@ -26,6 +27,8 @@ const tokens = require("./helpers/tokens");
 const contracts = require("./helpers/contracts");
 
 const erc20Abi = require("./abi/ERC20.json");
+
+let tankToken;
 
 let rariFundManager;
 let rariFundController;
@@ -47,6 +50,8 @@ async function deploy() {
   const RariFundController = await ethers.getContractFactory("RariFundController");
   //prettier-ignore
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
+  //prettier-ignore
+  const RariTankToken = await ethers.getContractFactory("RariTankToken");
 
   rariDataProvider = await RariDataProvider.deploy();
   await rariDataProvider.deployed();
@@ -57,18 +62,23 @@ async function deploy() {
   rariFundController = await RariFundController.deploy(
     rariFundManager.address,
     rebalancer.address,
-    contracts.rariFundManager,
     rariDataProvider.address
   );
-  await rariFundController.deployed();
 
+  await rariFundController.deployed();
   await rariFundManager.setRariFundController(rariFundController.address);
 
-  for (let i = 0; i < tokens.length; i++) {
-    await rariFundController
-      .newTank(tokens[i].token, borrowedToken)
-      .catch((error) => console.log(error));
-  }
+  const rariTankToken = await RariTankToken.deploy(
+    "Rari Tank Token",
+    `rt${symbol}-USDC`
+  );
+  await rariTankToken.deployed();
+
+  await rariFundController
+    .newTank(token, decimals, borrowedToken, rariTankToken.address)
+    .catch((error) => console.log(error));
+
+  tankToken = rariTankToken.address;
 }
 
 console.log("\n");
@@ -100,7 +110,7 @@ describe("RariFundManager", async () => {
     // Note that DAI, which is being used in this example is pegged to 1 USD
     const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
 
-    await tokenContract.approve(rariFundManager.address, 2);
+    await tokenContract.connect(user).approve(rariFundManager.address, 2);
     await rariFundManager
       .connect(user)
       .deposit(symbol, 1)

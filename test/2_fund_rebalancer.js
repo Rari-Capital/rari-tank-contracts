@@ -12,6 +12,7 @@ const tokenAddresses = require("./helpers/token");
 const usedToken = tokenAddresses.token;
 
 const token = usedToken.underlying;
+const decimals = usedToken.decimals;
 const symbol = usedToken.symbol;
 const userAddress = usedToken.user;
 const depositNumber = usedToken.depositAmount;
@@ -28,6 +29,7 @@ const { assert } = require("console");
 
 const { time } = require("@openzeppelin/test-helpers");
 
+let tankToken;
 let rariFundManager;
 let rariFundController;
 
@@ -48,6 +50,8 @@ async function deploy() {
   const RariFundController = await ethers.getContractFactory("RariFundController");
   //prettier-ignore
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
+  //prettier-ignore
+  const RariTankToken = await ethers.getContractFactory("RariTankToken");
 
   rariDataProvider = await RariDataProvider.deploy();
   await rariDataProvider.deployed();
@@ -58,18 +62,23 @@ async function deploy() {
   rariFundController = await RariFundController.deploy(
     rariFundManager.address,
     rebalancer.address,
-    contracts.rariFundManager,
     rariDataProvider.address
   );
-  await rariFundController.deployed();
 
+  await rariFundController.deployed();
   await rariFundManager.setRariFundController(rariFundController.address);
 
-  for (let i = 0; i < tokens.length; i++) {
-    await rariFundController
-      .newTank(tokens[i].token, borrowing)
-      .catch((error) => console.log(error));
-  }
+  const rariTankToken = await RariTankToken.deploy(
+    "Rari Tank Token",
+    `rt${symbol}-USDC`
+  );
+  await rariTankToken.deployed();
+
+  await rariFundController
+    .newTank(token, decimals, borrowing, rariTankToken.address)
+    .catch((error) => console.log(error));
+
+  tankToken = rariTankToken.address;
 }
 
 describe("RariFundController, RariFundTanks", async () => {
@@ -113,9 +122,15 @@ describe("RariFundController, RariFundTanks", async () => {
   describe("Withdrawals ", async () => {
     it("Withdraws funds from protocols", async () => {
       const tokenContract = await hre.ethers.getContractAt(erc20Abi, token);
+      const tankTokenContract = await hre.ethers.getContractAt(
+        erc20Abi,
+        tankToken
+      );
 
-      await time.advanceBlock();
       await rariFundController.connect(rebalancer).rebalance(token);
+      tankTokenContract
+        .connect(user)
+        .approve(rariFundController.address, `${depositNumber}00000000000000`);
       await rariFundManager.connect(user).withdraw(symbol, depositNumber);
     });
   });

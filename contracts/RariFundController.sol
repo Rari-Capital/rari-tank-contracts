@@ -1,7 +1,8 @@
 pragma solidity ^0.7.0;
 
-import "./RariFundTank.sol";
-
+import {RariFundTank} from "./RariFundTank.sol";
+import "hardhat/console.sol";
+import "./interfaces/IRariTankToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -35,12 +36,10 @@ contract RariFundController is Ownable {
     constructor(
         address _rariFundManager,
         address _fundRebalancer,
-        address _rariStablePool,
         address _rariDataProvider
     ) {
         rariFundManager = _rariFundManager;
         fundRebalancer = _fundRebalancer;
-        rariStablePool = _rariStablePool;
         rariDataProvider = _rariDataProvider;
     }
 
@@ -64,19 +63,24 @@ contract RariFundController is Ownable {
         @dev Deploys a new RariFundTank and store it in the contract
         @param erc20Contract The address of the ERC20 token to be supported by the tank
     */
-    function newTank(address erc20Contract, address erc20BorrowContract)
-        external
-        onlyOwner()
-    {
+    function newTank(
+        address erc20Contract,
+        uint256 decimals,
+        address erc20BorrowContract,
+        address tankToken
+    ) external onlyOwner() returns (address) {
         //prettier-ignore
         RariFundTank tank = new RariFundTank(
             erc20Contract,
+            decimals,
             erc20BorrowContract,
-            rariStablePool,
-            rariDataProvider            
+            rariDataProvider,
+            tankToken
         );
         rariFundTanks.push(address(tank));
         rariFundTankTokens[erc20Contract] = address(tank);
+
+        return address(tank);
     }
 
     /**
@@ -112,7 +116,9 @@ contract RariFundController is Ownable {
         uint256 amount
     ) external onlyRariFundManager() {
         address tankContract = rariFundTankTokens[erc20Contract];
-        RariFundTank(tankContract).withdraw(account, amount);
+        (address token, uint256 burnAmount) =
+            RariFundTank(tankContract).withdraw(account, amount);
+        IRariTankToken(token).burnFrom(account, burnAmount);
     }
 
     /**

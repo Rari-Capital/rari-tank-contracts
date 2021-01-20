@@ -79,7 +79,16 @@ contract RariDataProvider {
     }
 
     /**
-        @dev Retrieve the borrowed balance for the contract
+        @dev Retrieve the balanceOfUnderlying from the cTokenContract
+        @param underlying The address of the underlying ERC20 contract
+        @param account The address whose balance is being returned
+    */
+    function balanceOfUnderlying(address underlying, address account) external returns (uint256) {
+        return ICErc20(getCErc20Contract(underlying)).borrowBalanceCurrent(account);
+    }
+
+    /**
+        @dev Retrieve the borrow balance from the contract
         @param underlying The address of the underlying ERC20 contract
      */
     function borrowBalanceCurrent(address underlying) external returns (uint256) {

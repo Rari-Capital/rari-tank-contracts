@@ -9,8 +9,9 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 library RariPoolController {
     using SafeMath for uint256;
 
+    address constant rariFundManager = 0xC6BF8C8A55f77686720E0a88e2Fd1fEEF58ddf4a;
+
     function deposit(
-        address rariFundManager,
         string memory currencyCode,
         address underlying,
         uint256 amount
@@ -19,15 +20,11 @@ library RariPoolController {
         IRariFundManager(rariFundManager).deposit(currencyCode, amount);
     }
 
-    function withdraw(
-        address rariFundManager,
-        string memory currencyCode,
-        uint256 amount
-    ) internal {
+    function withdraw(string memory currencyCode, uint256 amount) internal {
         IRariFundManager(rariFundManager).withdraw(currencyCode, amount);
     }
 
-    function getUSDBalance(address rariFundManager) internal returns (uint256) {
+    function getUSDBalance() internal returns (uint256) {
         return IRariFundManager(rariFundManager).balanceOf(address(this)).div(1e12);
     }
 }

@@ -12,14 +12,19 @@ library UniswapController {
 
     address constant factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
-    function swapTokens(address[] memory path, uint256 amount) internal {
-        require(amount > 0, "SushiswapController: Amount cannot be 0");
-        require(path[0] != path[1], "SushiswapController: Assets cannot be the same");
+    function swapTokens(address[] memory path, uint256 amount)
+        internal
+        returns (uint256)
+    {
+        require(amount > 0, "UniswapController: Amount cannot be 0");
+        require(path[0] != path[1], "UniController: Assets cannot be the same");
 
         uint256[] memory amounts = UniswapV2Library.getAmountsOut(factory, amount, path);
         address pair = UniswapV2Library.pairFor(factory, path[0], path[1]);
         IERC20(path[0]).safeTransfer(pair, amounts[0]);
         swap(amounts, path);
+
+        return amounts[1];
     }
 
     function swap(uint256[] memory amounts, address[] memory path) internal {
