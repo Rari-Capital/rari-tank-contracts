@@ -37,7 +37,7 @@ library RariPoolController {
         IRariFundManager(RARI_FUND_MANAGER).withdraw(currencyCode, amount);
     }
 
-    /** @return The contract's USD balance in the Rari Stable Pool, in mantissa form */
+    /** @return The contract's USD balance in the Rari Stable Pool, scaled by 1e18 */
     function balanceOf() internal returns (uint256) {
         IRariFundManager(RARI_FUND_MANAGER).balanceOf(address(this));
     }

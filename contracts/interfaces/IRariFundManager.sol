@@ -8,7 +8,4 @@ interface IRariFundManager {
     function deposit(address, uint256) external;
     function withdraw(address, uint256) external;
     function rebalance(address) external;
-    
-    function usdBalance(address, address) external;
-    function underlyingBalance(address, address) external;
 }
