@@ -1,4 +1,4 @@
-pragma solidity ^0.7.0;
+pragma solidity 0.7.3;
 
 interface IRariFundManager {
     function balanceOf(address) external returns (uint256);

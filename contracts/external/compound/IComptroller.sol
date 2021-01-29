@@ -1,4 +1,4 @@
-pragma solidity ^0.7.0;
+pragma solidity 0.7.3;
 
 /**
     @title Compound's Comptroller Contract
