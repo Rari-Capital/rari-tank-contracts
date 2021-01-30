@@ -5,9 +5,7 @@ pragma solidity 0.7.3;
     @author Compound
  */
 interface IComptroller {
-    //prettier-ignore
     function getAccountLiquidity(address account) external view returns (uint256, uint256, uint256);
-
     function markets(address)
         external
         view

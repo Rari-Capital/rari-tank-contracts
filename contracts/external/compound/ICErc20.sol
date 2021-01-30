@@ -20,4 +20,6 @@ interface ICErc20 {
     function repayBorrow(uint256) external returns (uint256);
 
     function exchangeRateCurrent() external returns (uint256);
+
+    function underlying() external returns (address);
 }
