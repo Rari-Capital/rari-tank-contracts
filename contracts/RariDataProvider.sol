@@ -10,6 +10,11 @@ import {IComptroller} from "./external/compound/IComptroller.sol";
 /* Libaries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
+/**
+    @title RariDataProvider
+    @author Jet Jadeja <jet@rari.capital>
+    @dev Provides price data and executes price-related calculations
+*/
 contract RariDataProvider is IRariDataProvider {
     using SafeMath for uint256;
 

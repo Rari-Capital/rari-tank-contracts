@@ -2,8 +2,13 @@ pragma solidity 0.7.3;
 
 /* Interfaces */
 import {IRariFundTank} from "./interfaces/IRariFundTank.sol";
+import {IRariDataProvider} from "./interfaces/IRariDataProvider.sol";
+
+import {IComptroller} from "./external/compound/IComptroller.sol";
 
 /* Libraries */
+import {FusePoolController} from "./lib/FusePoolController.sol";
+import {RariPoolController} from "./lib/RariPoolController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 /* External */
@@ -26,15 +31,18 @@ contract RariFundTank is IRariFundTank, ERC20 {
     /*************
      * Variables *
     *************/
-
-    /** @dev The address of the RariFundManager */
-    address private fundManager;
-
+    
     /** @dev The address of the ERC20 token supported by the tank */
     address public token;
 
     /** @dev The address of the CErc20 Contract representing the tank's underlying token */
-    address private cToken;
+    address public cToken;
+
+    /** @dev The address of the RariFundManager */
+    address private fundManager;
+
+    /** @dev The address of the RariDataProvider */
+    address private dataProvider;
 
     /** 
         @dev The address of cToken representing the borrowed token 
@@ -47,6 +55,12 @@ contract RariFundTank is IRariFundTank, ERC20 {
 
     /** @dev A count of undeposited funds */
     uint256 private dormantFunds;
+
+    /** @dev The tank's borrow balance */
+    uint256 private borrowBalance;
+
+    /** @dev The tank's stable pool balance */
+    uint256 private stablePoolBalance;
 
     /*************
      * Modifiers *
@@ -61,7 +75,7 @@ contract RariFundTank is IRariFundTank, ERC20 {
     ***************/
     constructor(
         address _fundManager, 
-        address _comptroller
+        address _comptroller,
         address _token, 
         address _cToken,
         address _borrowCToken
@@ -85,13 +99,16 @@ contract RariFundTank is IRariFundTank, ERC20 {
         uint256 mantissa = 18 - ERC20(token).decimals();
         uint256 exchangeRate = exchangeRateCurrent();
 
-        _mint(account, amount.mul(exchangeRate).div(10**mantissa));
-        dormantFunds += amount;
+        dormantFunds += amount; // Increase the tank's total balance
+        _mint(account, amount.mul(exchangeRate).div(10**mantissa)); // Mints RTT
     }
     function withdraw(address account, uint256 amount) external override onlyFundManager {}
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
-    function rebalance() external override onlyFundManager {}
+    function rebalance() external override onlyFundManager {
+        //TODO: Handle interest before all
+        depositFunds();
+    }
 
     /*******************
     * Public Functions *
@@ -100,15 +117,52 @@ contract RariFundTank is IRariFundTank, ERC20 {
     /** @return The exchange rate between the RTT and the underlying token */
     function exchangeRateCurrent() 
         public 
-        view 
         override  
         returns (uint256) 
     {
         uint256 mantissa = 18 - ERC20(token).decimals();
-        uint256 balance = dormantFunds.mul(10**mantissa);
+        uint256 balance = dormantFunds.add(FusePoolController.balanceOfUnderlying(cToken)).mul(10**mantissa);
         uint256 totalSupply = totalSupply();
 
         if(balance == 0 || totalSupply == 0) return 50e18; // The initial exchange rate should be 50
         return balance.mul(1e18).div(totalSupply);
+    }
+
+    /********************
+    * Private Functions *
+    *********************/
+
+    /** @dev Deposit dormant funds into a FusePool, borrow a stable asset and put it into the stable pool */
+    function depositFunds() private onlyFundManager {
+        IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
+        FusePoolController.deposit(token, cToken, dormantFunds);
+        
+        uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
+        uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(IComptroller(comptroller), cToken, balanceOfUnderlying);
+        
+        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(IComptroller(comptroller).oracle(), borrowCToken, borrowAmountUSD);
+
+        //uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(borrowCToken);
+
+        if(idealBorrowBalance > borrowBalance) borrow(idealBorrowBalance - borrowBalance);
+        if(borrowBalance > idealBorrowBalance) repay(borrowBalance - idealBorrowBalance);
+    }
+
+    /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
+    function borrow(uint256 amount) private {
+        FusePoolController.borrow(borrowCToken, amount);
+        borrowBalance += amount;
+
+        RariPoolController.deposit(BORROWING_SYMBOL, BORROWING, amount);
+        stablePoolBalance += amount;
+    }
+
+    /** @dev Withdraw a stable asset from Rari and repay  */
+    function repay(uint256 amount) private {
+        RariPoolController.withdraw(BORROWING_SYMBOL, amount);
+        stablePoolBalance -= amount;
+
+        FusePoolController.repay(borrowCToken, amount);
+        borrowBalance -= amount;
     }
 }
