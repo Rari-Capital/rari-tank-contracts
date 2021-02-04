@@ -5,13 +5,12 @@ import {IRariFundTank} from "./interfaces/IRariFundTank.sol";
 import {IRariTankFactory} from "./interfaces/IRariTankFactory.sol";
 import {IRariFundManager} from "./interfaces/IRariFundManager.sol";
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 /* Libraries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
-/* External */
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 /**

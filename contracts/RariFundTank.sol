@@ -5,14 +5,13 @@ import {IRariFundTank} from "./interfaces/IRariFundTank.sol";
 import {IRariDataProvider} from "./interfaces/IRariDataProvider.sol";
 
 import {IComptroller} from "./external/compound/IComptroller.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /* Libraries */
 import {FusePoolController} from "./lib/FusePoolController.sol";
 import {RariPoolController} from "./lib/RariPoolController.sol";
+import {UniswapController} from "./lib/UniswapController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-
-/* External */
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
     @title RariFundTank
@@ -106,8 +105,8 @@ contract RariFundTank is IRariFundTank, ERC20 {
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
     function rebalance() external override onlyFundManager {
-        //TODO: Handle interest before all
-        depositFunds();
+        registerProfit();
+        depositDormantFunds();
     }
 
     /*******************
@@ -133,7 +132,8 @@ contract RariFundTank is IRariFundTank, ERC20 {
     *********************/
 
     /** @dev Deposit dormant funds into a FusePool, borrow a stable asset and put it into the stable pool */
-    function depositFunds() private onlyFundManager {
+    function depositDormantFunds() private {
+
         IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
         FusePoolController.deposit(token, cToken, dormantFunds);
         
@@ -146,6 +146,32 @@ contract RariFundTank is IRariFundTank, ERC20 {
 
         if(idealBorrowBalance > borrowBalance) borrow(idealBorrowBalance - borrowBalance);
         if(borrowBalance > idealBorrowBalance) repay(borrowBalance - idealBorrowBalance);
+    }
+
+    /** @dev Register profits and repay interest */
+    function registerProfit() private {
+        uint256 currentStablePoolBalance = RariPoolController.balanceOf().div(1e12);
+        uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(borrowCToken);
+        
+        uint256 profit = currentStablePoolBalance > stablePoolBalance ? 
+            currentStablePoolBalance.sub(stablePoolBalance) : 
+            0;
+
+        uint256 debt = currentBorrowBalance > borrowBalance ? 
+            currentBorrowBalance.sub(borrowBalance) : 
+            0;
+
+        RariPoolController.withdraw(BORROWING_SYMBOL, profit);
+
+        if(debt > profit) {
+            FusePoolController.repay(borrowCToken, profit);
+            return;
+        }
+
+        FusePoolController.repay(borrowCToken, debt);
+        
+        uint256 underlyingProfit = swapInterestForUnderlying(profit- debt);
+        FusePoolController.deposit(comptroller, cToken, underlyingProfit);
     }
 
     /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
@@ -164,5 +190,16 @@ contract RariFundTank is IRariFundTank, ERC20 {
 
         FusePoolController.repay(borrowCToken, amount);
         borrowBalance -= amount;
+    }
+
+    /** 
+        @dev Facilitate a swap from the borrowed token to the underlying token 
+        @return The amount of tokens returned by Uniswap
+    */
+    function swapInterestForUnderlying(uint256 amount) private returns (uint256) {
+        address[] memory path = new address[](2);
+        path[0] = BORROWING;
+        path[1] = token;
+        return UniswapController.swapTokens(path, amount);
     }
 }

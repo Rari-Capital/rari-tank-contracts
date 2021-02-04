@@ -1,14 +1,15 @@
 pragma solidity ^0.7.3;
 
-/* Libraries */
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-
-/* External */
+/* Interfaces */
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ICErc20} from "../external/compound/ICErc20.sol";
 import {IComptroller} from "../external/compound/IComptroller.sol";
 import {IPriceFeed} from "../external/compound/IPriceFeed.sol";
+
+/* Libraries */
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+
 
 /**
     @title FusePoolController

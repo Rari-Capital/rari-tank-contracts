@@ -6,7 +6,6 @@ import {RariFundTank} from "./RariFundTank.sol";
 /* Interfaces */
 import {IRariTankFactory} from "./interfaces/IRariTankFactory.sol";
 
-/* External */
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ICErc20} from "./external/compound/ICErc20.sol";
 import {IComptroller} from "./external/compound/IComptroller.sol";

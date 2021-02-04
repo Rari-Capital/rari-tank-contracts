@@ -1,6 +1,6 @@
 pragma solidity ^0.7.3;
 
-/* External */
+/* Interfaces */
 import {IRariFundManager} from "../external/rari/IRariFundManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
