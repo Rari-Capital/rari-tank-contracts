@@ -24,14 +24,18 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     /** @dev The address of the RariFundManager */
     address private fundManager;
 
+    /** @dev The address of the RariDataProvider */
+    address private dataProvider;
+
     /** @dev The address of the FusePoolDirectory */
     address private fusePoolDirectory;
 
     /***************
      * Constructor *
     ***************/
-    constructor(address _fundManager) {
+    constructor(address _fundManager, address _dataProvider) {
         fundManager = _fundManager;
+        dataProvider = _dataProvider;
     }
 
     /********************
@@ -51,7 +55,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
         @param comptroller The FusePool's comptroller
         @return The address of the new tank
     */
-    function deployTank(address erc20Contract, address cErc20Contract, address comptroller) external override returns (address) {
+    function deployTank(address erc20Contract, address cErc20Contract, address borrowCErc20Contract, address comptroller) external override returns (address) {
         require(msg.sender == fundManager, "RariTankFactory: Must be called by the RariFundManager");
 
         address underlying = ICErc20(cErc20Contract).underlying();
@@ -63,7 +67,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
         (bool isListed,,) = IComptroller(comptroller).markets(cErc20Contract);
         require(isListed, "RariTankFactory: Unlisted CErc20Contract");
 
-        RariFundTank tank = new RariFundTank();
+        RariFundTank tank = new RariFundTank(fundManager, dataProvider, comptroller, erc20Contract, cErc20Contract, borrowCErc20Contract);
         return address(tank);
     }
 }

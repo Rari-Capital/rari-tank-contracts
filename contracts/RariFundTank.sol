@@ -42,7 +42,6 @@ contract RariFundTank is IRariFundTank, ERC20 {
 
     /** @dev The address of the RariDataProvider */
     address private dataProvider;
-
     /** 
         @dev The address of cToken representing the borrowed token 
         This will be removed when the Comptroller underlying => cToken map is implemented
@@ -73,7 +72,8 @@ contract RariFundTank is IRariFundTank, ERC20 {
      * Constructor *
     ***************/
     constructor(
-        address _fundManager, 
+        address _fundManager,
+        address _dataProvider,
         address _comptroller,
         address _token, 
         address _cToken,
@@ -85,6 +85,7 @@ contract RariFundTank is IRariFundTank, ERC20 {
         ) 
     {
         fundManager = _fundManager;
+        dataProvider = _dataProvider;
         token = _token;
         cToken = _cToken;
         comptroller = _comptroller;

@@ -47,13 +47,14 @@ contract RariFundManager is IRariFundManager, Ownable {
     function deployTank(
         address erc20Contract, 
         address cErc20Contract, 
+        address borrowCErc20Contract, 
         address comptroller
     ) 
         external 
         returns (address tank) 
     {
         require(underlyingToTanks[erc20Contract] == address(0), "RariFundManager: Tank supporting this asset already exists");
-        tank = IRariTankFactory(factory).deployTank(erc20Contract, cErc20Contract, comptroller);
+        tank = IRariTankFactory(factory).deployTank(erc20Contract, cErc20Contract, borrowCErc20Contract, comptroller);
         underlyingToTanks[erc20Contract] = tank;
     }
 
@@ -66,6 +67,7 @@ contract RariFundManager is IRariFundManager, Ownable {
         IRariFundTank(tankContract).deposit(msg.sender, amount);
 
     }
+    
     function withdraw(address erc20Contract, uint256 amount) external override {}
 
     /** 
