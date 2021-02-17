@@ -1,38 +1,41 @@
+const contracts = require("./contracts");
+const ethers = hre.ethers;
+
+
 async function deploy() {
-  [owner, rebalancer] = await ethers.getSigners();
-  await hre.network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: ["0x66c57bf505a85a74609d2c83e94aabb26d691e1f"],
-  });
+    const RariFundManager = await ethers.getContractFactory("RariFundManager");
+    const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
+    const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
 
-  user = await ethers.provider.getSigner(
-    "0x66c57bf505a85a74609d2c83e94aabb26d691e1f"
-  );
+    const rariDataProvider = await RariDataProvider.deploy();
+    console.log("leebs")
+    await rariDataProvider.deployed();
+    console.log("sheebs")
+    console.log(rariDataProvider.address)
 
-  //prettier-ignore
-  const RariFundManager = await ethers.getContractFactory("RariFundManager");
-  //prettier-ignore
-  const RariFundController = await ethers.getContractFactory("RariFundController");
+    const rariFundManager = await RariFundManager.deploy();
+    await rariFundManager.deployed();
+    console.log(rariFundManager.address);
 
-  rariFundManager = await RariFundManager.deploy();
-  await rariFundManager.deployed();
+    const rariTankFactory = await RariTankFactory.deploy(rariFundManager.address, rariDataProvider.address);
+    await rariTankFactory.deployed();
+    console.log(rariTankFactory.address);
 
-  rariFundController = await RariFundController.deploy(
-    rariFundManager.address,
-    rebalancer.address,
-    contracts.comptroller,
-    contracts.priceFeed,
-    contracts.rariFundManager
-  );
-  await rariFundController.deployed();
+    rariFundManager.setFactory(rariTankFactory.address);
+    rariFundManager.deployTank(contracts.token, contracts.cErc20, contracts.borrowCErc20, contracts.comptroller);
 
-  await rariFundManager.setRariFundController(rariFundController.address);
+    const rariFundTankContract = await rariFundManager.getTank(contracts.token);
 
-  for (let i = 0; i < tokens.length; i++) {
-    await rariFundController
-      .newTank(tokens[i].token, tokens[i].decimals)
-      .catch((error) => console.log(error));
-  }
+    console.log(rariFundTankContract);
+
+    return( 
+    [
+        rariFundManager,
+        rariTankFactory,
+        rariDataProvider,
+        rariFundTankContract,
+        contracts.token,
+    ])
 }
 
-module.exports = deploy;
+module.exports = deploy();
