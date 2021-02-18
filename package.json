@@ -19,7 +19,9 @@
   "homepage": "https://github.com/JetDeveloping/rari-money-market#readme",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-ganache": "^2.0.0",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.10",
     "@tenderly/hardhat-tenderly": "^1.0.6",
     "chai": "^4.2.0",
@@ -31,7 +33,8 @@
     "prettier-plugin-solidity": "^1.0.0-beta.2",
     "solidity-coverage": "^0.7.13",
     "ts-node": "^9.1.1",
-    "typescript": "^4.1.3"
+    "typescript": "^4.1.3",
+    "web3": "^1.3.4"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",
@@ -41,8 +44,7 @@
     "ganache-cli": "^6.12.2",
     "ganache-time-traveler": "^1.0.15",
     "hardhat-preprocessor": "^0.1.1",
-    "truffle": "^5.1.62",
-    "web3": "^1.3.1"
+    "truffle": "^5.1.62"
   },
   "peerDependencies": {
     "@types/mocha": "^8.2.0",

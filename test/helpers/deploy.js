@@ -8,13 +8,12 @@ async function deploy() {
     const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
 
     const rariDataProvider = await RariDataProvider.deploy();
-    console.log("leebs")
     await rariDataProvider.deployed();
-    console.log("sheebs")
     console.log(rariDataProvider.address)
 
     const rariFundManager = await RariFundManager.deploy();
     await rariFundManager.deployed();
+    console.log("hello")
     console.log(rariFundManager.address);
 
     const rariTankFactory = await RariTankFactory.deploy(rariFundManager.address, rariDataProvider.address);
@@ -28,14 +27,16 @@ async function deploy() {
 
     console.log(rariFundTankContract);
 
-    return( 
-    [
-        rariFundManager,
-        rariTankFactory,
-        rariDataProvider,
-        rariFundTankContract,
-        contracts.token,
-    ])
+    const user = await ethers.provider.getSigner(contracts.user);
+    console.log(user)
+
+    return(
+        [
+            rariFundManager,
+            rariTankFactory,
+            rariDataProvider,
+        ]
+    )
 }
 
 module.exports = deploy();
