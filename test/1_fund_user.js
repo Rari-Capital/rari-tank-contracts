@@ -12,7 +12,7 @@ chai.should();
 const contracts = require("./helpers/deploy");
 const external = require("./helpers/contracts");
 
-const x = require("./fuse-sdk");
+const x = require("fuse-sdk");
 
 //const rariFundManager, rariTankFactory, rariDataProvider;
 
