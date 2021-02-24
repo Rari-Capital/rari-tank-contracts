@@ -23,12 +23,13 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.10",
-    "@tenderly/hardhat-tenderly": "^1.0.6",
+    "@tenderly/hardhat-tenderly": "^1.0.7",
     "chai": "^4.2.0",
     "chai-bn-equal": "^1.0.0",
     "ethereum-waffle": "^3.2.1",
     "ethers": "^5.0.24",
     "hardhat": "^2.0.6",
+    "mocha": "^8.3.0",
     "prettier": "2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.2",
     "solidity-coverage": "^0.7.13",
@@ -44,6 +45,7 @@
     "ganache-cli": "^6.12.2",
     "ganache-time-traveler": "^1.0.15",
     "hardhat-preprocessor": "^0.1.1",
+    "prompt-sync": "^4.2.0",
     "truffle": "^5.1.62"
   },
   "peerDependencies": {

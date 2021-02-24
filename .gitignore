@@ -1,6 +1,8 @@
-node_modules
+node_modules/*
 artifacts
 cache
 .editorconfig
 coverage
 tests
+
+!node_modules/fuse-sdk

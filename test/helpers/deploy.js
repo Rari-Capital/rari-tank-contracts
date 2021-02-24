@@ -1,42 +1,161 @@
-const contracts = require("./contracts");
+const contracts = require("./constants");
 const ethers = hre.ethers;
+const web3 = hre.web3;
 
+const prompt = require('prompt-sync')();
+const Fuse = require("./fuse-sdk/src/index");
+const fuse = new Fuse(web3.currentProvider);
+
+const addresses = require("./constants");
+const selectedAccount = addresses.FUSE_DEPLOYER;
+const [usdc, usdcHolder] = [addresses.USDC, addresses.usdcHolder];
+const [wbtc, wbtcHolder] = [addresses.WBTC, addresses.WBTC_HOLDER];
+
+console.log(
+  fuse.compoundContracts["contracts/ComptrollerDelegator.sol:ComptrollerDelegator"]
+)
+
+async function deployFuse() {
+  console.log(
+    (await web3.eth.getCode(Fuse.FUSE_SAFE_LIQUIDATOR_CONTRACT_ADDRESS)).length
+  );
+  const preferredPriceOracle = await fuse.deployPriceOracle(
+    "PreferredPriceOracle",
+    { isPublic: true },
+    { from: selectedAccount }
+  );
+  console.log(preferredPriceOracle, "PREFERRED PRICE ORACLE ADDRESS");
+
+  let comptroller = new web3.eth.Contract(
+    JSON.parse(
+      fuse.compoundContracts["contracts/Comptroller.sol:Comptroller"].abi
+    )
+  );
+  comptroller = await comptroller
+    .deploy({
+      data:
+        "0x" +
+        fuse.compoundContracts["contracts/Comptroller.sol:Comptroller"].bin,
+    })
+    .send({ from: selectedAccount });
+  console.log(comptroller.options.address, "COMPTROLLER ADDRESS");
+
+  var cErc20 = new web3.eth.Contract(
+    JSON.parse(
+      fuse.compoundContracts["contracts/CErc20Delegate.sol:CErc20Delegate"].abi
+    )
+  );
+  cErc20 = await cErc20
+    .deploy({
+      data:
+        "0x" +
+        fuse.compoundContracts["contracts/CErc20Delegate.sol:CErc20Delegate"]
+          .bin,
+    })
+    .send({ from: selectedAccount });
+  console.log(cErc20.options.address, "CERC20 ADDRESS");
+
+  var cToken = new web3.eth.Contract(
+    JSON.parse(
+      fuse.compoundContracts["contracts/CEtherDelegate.sol:CEtherDelegate"].abi
+    )
+  );
+  cToken = await cToken
+    .deploy({
+      data:
+        "0x" +
+        fuse.compoundContracts["contracts/CEtherDelegate.sol:CEtherDelegate"]
+          .bin,
+    })
+    .send({ from: selectedAccount });
+  console.log(cToken.options.address, "CETH ADDRESS");
+}
+
+async function deployFusePool() {
+  const [fusePool] = await fuse.deployPool(
+    "Tanks",
+    false,
+    web3.utils.toBN(0.5e18),
+    web3.utils.toBN(20e18),
+    web3.utils.toBN(1.08e18),
+    "PreferredPriceOracle",
+    {isPrivate: false},
+    { from: selectedAccount }
+  );
+  console.log(fusePool, "FUSEPOOL ADDRESS");
+
+  console.log(
+    {
+      underlying: usdc,
+      decimals: 8,
+      comptroller: fusePool,
+      initialExchangeRateMantissa: web3.utils.toBN(1e18).toString(),
+      name: "Tanks USDC",
+      symbol: "f-1-USDC",
+      interestRateModel: "JumpRateModel",
+      admin: selectedAccount,
+    },
+    web3.utils.toBN(0.75e18).toString(),
+    0,
+    0,
+    { from: selectedAccount },
+    true,
+  )
+
+  const fWBTC = await fuse.deployAsset(
+    {
+      underlying: wbtc,
+      decimals: 8,
+      comptroller: fusePool,
+      initialExchangeRateMantissa: web3.utils.toBN(1e18),
+      name: "Tanks USDC",
+      symbol: "f-1-USDC",
+      interestRateModel: "JumpRateModel",
+      admin: selectedAccount,
+    },
+    web3.utils.toBN(0.75e18),
+    web3.utils.toBN(0.2e18),
+    web3.utils.toBN(0),
+    { from: selectedAccount },
+    true
+  );
+
+  console.log(fWBTC);
+}
 
 async function deploy() {
-    const RariFundManager = await ethers.getContractFactory("RariFundManager");
-    const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
-    const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
+  await deployFuse();
+  await deployFusePool();
 
-    const rariDataProvider = await RariDataProvider.deploy();
-    await rariDataProvider.deployed();
-    console.log(rariDataProvider.address)
+  const RariFundManager = await ethers.getContractFactory("RariFundManager");
+  const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
+  const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
 
-    const rariFundManager = await RariFundManager.deploy();
-    await rariFundManager.deployed();
-    console.log("hello")
-    console.log(rariFundManager.address);
+  const rariDataProvider = await RariDataProvider.deploy();
+  await rariDataProvider.deployed();
+  console.log(rariDataProvider.address, "DATA PROVIDER ADDRESS");
 
-    const rariTankFactory = await RariTankFactory.deploy(rariFundManager.address, rariDataProvider.address);
-    await rariTankFactory.deployed();
-    console.log(rariTankFactory.address);
+  const rariFundManager = await RariFundManager.deploy();
+  await rariFundManager.deployed();
+  console.log(rariFundManager.address, "FUND MANAGER ADDRESS");
 
-    rariFundManager.setFactory(rariTankFactory.address);
-    rariFundManager.deployTank(contracts.token, contracts.cErc20, contracts.borrowCErc20, contracts.comptroller);
+  const rariTankFactory = await RariTankFactory.deploy(
+    rariFundManager.address,
+    rariDataProvider.address
+  );
+  await rariTankFactory.deployed();
+  console.log(rariTankFactory.address, "FACTORY ADDRESS");
 
-    const rariFundTankContract = await rariFundManager.getTank(contracts.token);
+  rariFundManager.setFactory(rariTankFactory.address);
+  rariFundManager.deployTank(contracts.token, contracts.cErc20, contracts.borrowCErc20, contracts.comptroller);
 
-    console.log(rariFundTankContract);
+  const rariFundTankContract = await rariFundManager.getTank(contracts.token);
 
-    const user = await ethers.provider.getSigner(contracts.user);
-    console.log(user)
+  console.log(rariFundTankContract, "TANK ADDRESS");
 
-    return(
-        [
-            rariFundManager,
-            rariTankFactory,
-            rariDataProvider,
-        ]
-    )
+  const user = await ethers.provider.getSigner(contracts.user);
+
+  return [rariFundManager, rariTankFactory, rariDataProvider];
 }
 
 module.exports = deploy();

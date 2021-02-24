@@ -10,20 +10,19 @@ chai.use(chaiAsPromised);
 chai.should();
 
 const contracts = require("./helpers/deploy");
-const external = require("./helpers/contracts");
+const constants = require("./helpers/constants");
 
-const x = require("fuse-sdk");
 
 //const rariFundManager, rariTankFactory, rariDataProvider;
 
-describe("RariFundManager", async () => {
+describe("RariFundManager", async function() {
+    this.timeout(300000)
     before(async () => {
         [rariFundManager, rariTankFactory, rariDataProvider] = await contracts;
-    });
+    })
 
     describe("Deposits function correctly", async () => {
         it("Sends funds to the tank", async () => {
-            
         });
     })
 })
