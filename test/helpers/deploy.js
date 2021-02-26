@@ -8,17 +8,11 @@ const fuse = new Fuse(web3.currentProvider);
 
 const addresses = require("./constants");
 const selectedAccount = addresses.FUSE_DEPLOYER;
-const [usdc, usdcHolder] = [addresses.USDC, addresses.usdcHolder];
-const [wbtc, wbtcHolder] = [addresses.WBTC, addresses.WBTC_HOLDER];
+const [usdc, wbtc, holder] = [addresses.USDC, addresses.WBTC, addresses.HOLDER];
 
-console.log(
-  fuse.compoundContracts["contracts/ComptrollerDelegator.sol:ComptrollerDelegator"]
-)
+
 
 async function deployFuse() {
-  console.log(
-    (await web3.eth.getCode(Fuse.FUSE_SAFE_LIQUIDATOR_CONTRACT_ADDRESS)).length
-  );
   const preferredPriceOracle = await fuse.deployPriceOracle(
     "PreferredPriceOracle",
     { isPublic: true },
@@ -71,6 +65,28 @@ async function deployFuse() {
   console.log(cToken.options.address, "CETH ADDRESS");
 }
 
+async function deposit(cToken, underlying, amount, depositor) {
+  var underlyingToken = new this.web3.eth.Contract(
+    JSON.parse(
+      fuse.compoundContracts["contracts/EIP20Interface.sol:EIP20Interface"].abi
+    ),
+    underlying
+  );
+
+  var cTokenContract = new this.web3.eth.Contract(
+    JSON.parse(
+      fuse.compoundContracts["contracts/CErc20Delegate.sol:CErc20Delegate"].abi
+    ),
+    cToken
+  );
+
+  await underlyingToken.methods.approve(cToken, amount.mul(web3.utils.toBN(2))).send({from: depositor});
+  await cTokenContract.methods.mint(amount).send({from: depositor});
+
+  console.log(await underlyingToken.methods.balanceOf(cToken).call(), "CTOKEN BALANCE");
+  console.log(await cTokenContract.methods.totalSupply().call(), "CTOKEN TOTAL SUPPLY");
+}
+
 async function deployFusePool() {
   const [fusePool] = await fuse.deployPool(
     "Tanks",
@@ -84,27 +100,9 @@ async function deployFusePool() {
   );
   console.log(fusePool, "FUSEPOOL ADDRESS");
 
-  console.log(
+  const [fUSDC] = await fuse.deployAsset(
     {
       underlying: usdc,
-      decimals: 8,
-      comptroller: fusePool,
-      initialExchangeRateMantissa: web3.utils.toBN(1e18).toString(),
-      name: "Tanks USDC",
-      symbol: "f-1-USDC",
-      interestRateModel: "JumpRateModel",
-      admin: selectedAccount,
-    },
-    web3.utils.toBN(0.75e18).toString(),
-    0,
-    0,
-    { from: selectedAccount },
-    true,
-  )
-
-  const fWBTC = await fuse.deployAsset(
-    {
-      underlying: wbtc,
       decimals: 8,
       comptroller: fusePool,
       initialExchangeRateMantissa: web3.utils.toBN(1e18),
@@ -120,12 +118,35 @@ async function deployFusePool() {
     true
   );
 
-  console.log(fWBTC);
+  const [fWBTC] = await fuse.deployAsset(
+    {
+      underlying: wbtc,
+      decimals: 8,
+      comptroller: fusePool,
+      initialExchangeRateMantissa: web3.utils.toBN(1e18),
+      name: "Tanks WBTC",
+      symbol: "f-1-WBTC",
+      interestRateModel: "JumpRateModel",
+      admin: selectedAccount,
+    },
+    web3.utils.toBN(0.75e18),
+    web3.utils.toBN(0.2e18),
+    web3.utils.toBN(0),
+    { from: selectedAccount },
+    true
+  );
+
+  console.log(fUSDC, "fUSDC ADDRESS");
+  console.log(fWBTC, "fWBTC ADDRESS");
+
+  deposit(fUSDC, usdc, web3.utils.toBN(1e12), holder);
+
+  return [fusePool];
 }
 
 async function deploy() {
   await deployFuse();
-  await deployFusePool();
+  const [comptroller]= await deployFusePool();
 
   const RariFundManager = await ethers.getContractFactory("RariFundManager");
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
@@ -141,20 +162,18 @@ async function deploy() {
 
   const rariTankFactory = await RariTankFactory.deploy(
     rariFundManager.address,
-    rariDataProvider.address
+    rariDataProvider.address,
+    Fuse.FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS,
   );
   await rariTankFactory.deployed();
   console.log(rariTankFactory.address, "FACTORY ADDRESS");
 
   rariFundManager.setFactory(rariTankFactory.address);
-  rariFundManager.deployTank(contracts.token, contracts.cErc20, contracts.borrowCErc20, contracts.comptroller);
+  rariFundManager.deployTank(wbtc, comptroller);
 
-  const rariFundTankContract = await rariFundManager.getTank(contracts.token);
-
+  const rariFundTankContract = await rariFundManager.getTank(wbtc);
   console.log(rariFundTankContract, "TANK ADDRESS");
-
-  const user = await ethers.provider.getSigner(contracts.user);
-
+  
   return [rariFundManager, rariTankFactory, rariDataProvider];
 }
 

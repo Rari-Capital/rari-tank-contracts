@@ -13,7 +13,6 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        gasPrice: 0,
         url: "https://eth-mainnet.alchemyapi.io/v2/UPMBuJ4TAQrsy9sdb4QSKuanqG1EYR3L",
           //"http://api.rari.capital:21917/",
       },

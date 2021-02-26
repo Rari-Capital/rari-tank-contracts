@@ -536,7 +536,6 @@ module.exports = class Fuse {
           "DAIInterestRateModelV2",
         ].indexOf(conf.interestRateModel) >= 0
       ) {
-        console.log("WEEEEEEENIS")
         try {
           conf.interestRateModel = await this.deployInterestRateModel(
             conf.interestRateModel,
@@ -642,7 +641,6 @@ module.exports = class Fuse {
       options,
       bypassPriceFeedCheck
     ) {
-      console.log(reserveFactor);
       // Check collateral factor
       if (
         Web3.utils.toBN(collateralFactor).isNeg() ||
@@ -796,7 +794,6 @@ module.exports = class Fuse {
       options,
       bypassPriceFeedCheck
     ) {
-      console.log(reserveFactor)
       // Get Comptroller
       var comptroller = new this.web3.eth.Contract(
         JSON.parse(contracts["contracts/Comptroller.sol:Comptroller"].abi),
@@ -804,13 +801,10 @@ module.exports = class Fuse {
       );
 
       // Check for price feed assuming !bypassPriceFeedCheck
-      console.log(!bypassPriceFeedCheck, 'BRO')
       if (!bypassPriceFeedCheck) await this.checkForCErc20PriceFeed(comptroller, conf);
 
       // Deploy CErc20Delegate implementation contract if necessary
-      console.log("BRO")
       if (!implementationAddress) {
-        console.log("weenis patrol")
         var cErc20Delegate = new this.web3.eth.Contract(
           JSON.parse(
             contracts["contracts/CErc20Delegate.sol:CErc20Delegate"].abi
@@ -847,36 +841,6 @@ module.exports = class Fuse {
         adminFee ? adminFee : 0,
       ];
 
-      console.log(
-        (await this.web3.eth.getCode(conf.underlying)).length, "UNDERLYING"
-      );
-      console.log(
-        (await this.web3.eth.getCode(conf.comptroller)).length, "COMPTROLLER"
-      );
-      console.log(
-        (await this.web3.eth.getCode(conf.interestRateModel)).length, "INTEREST RATE MODEL"
-      )
-      console.log(
-        (await this.web3.eth.getCode(implementationAddress)).length, "IMPL"
-      )
-
-      console.log(
-        [
-          conf.underlying,
-          conf.comptroller,
-          conf.interestRateModel,
-          conf.initialExchangeRateMantissa.toString(),
-          conf.name,
-          conf.symbol,
-          conf.decimals,
-          conf.admin,
-          implementationAddress,
-          "0x0",
-          reserveFactor ? reserveFactor.toString() : 0,
-          adminFee.toString(),
-        ]
-      )
-
       cErc20Delegator = await cErc20Delegator
         .deploy({
           data:
@@ -886,7 +850,6 @@ module.exports = class Fuse {
         })
         .send(options);
 
-      console.log("Success")
 
       // Register new asset with Comptroller
       cErc20Delegator.options.jsonInterface = JSON.parse(
