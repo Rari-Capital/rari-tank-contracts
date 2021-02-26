@@ -72,24 +72,23 @@ contract RariFundTank is IRariFundTank, ERC20 {
      * Constructor *
     ***************/
     constructor(
-        address _fundManager,
-        address _dataProvider,
+        address _token,
         address _comptroller,
-        address _token, 
-        address _cToken,
-        address _borrowCToken
+        address _fundManager,
+        address _dataProvider
     ) 
         ERC20(
             string(abi.encodePacked("Rari Tank ", ERC20(_token).name())),
             string(abi.encodePacked("rtt-", ERC20(_token).symbol(), "-USDC"))
         ) 
     {
+        token = _token;
+        comptroller = _comptroller;
         fundManager = _fundManager;
         dataProvider = _dataProvider;
-        token = _token;
-        cToken = _cToken;
-        comptroller = _comptroller;
-        borrowCToken = _borrowCToken;
+
+        cToken = address(IComptroller(_comptroller).getCTokensByUnderlying(token));
+        require(cToken != address(0), "Unsupported asset");
     }
 
     /********************
@@ -141,7 +140,7 @@ contract RariFundTank is IRariFundTank, ERC20 {
         uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
         uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(IComptroller(comptroller), cToken, balanceOfUnderlying);
         
-        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(IComptroller(comptroller).oracle(), borrowCToken, borrowAmountUSD);
+        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(IComptroller(comptroller), borrowCToken, borrowAmountUSD);
 
         //uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(borrowCToken);
 

@@ -41,20 +41,17 @@ contract RariFundManager is IRariFundManager, Ownable {
 
     /** 
         @dev Deploy a new tank
-        @param cErc20Contract The address of the CERC20 contract representing the token that the tank will support
-        @param comptroller The address of the Comptroller contract of the FusePool that the token belongs too
+        @param comptroller The address of the Comptroller contract of the FusePool that the token belongs to
     */
     function deployTank(
-        address erc20Contract, 
-        address cErc20Contract, 
-        address borrowCErc20Contract, 
+        address erc20Contract,  
         address comptroller
     ) 
         external 
         returns (address tank) 
     {
         require(underlyingToTanks[erc20Contract] == address(0), "RariFundManager: Tank supporting this asset already exists");
-        tank = IRariTankFactory(factory).deployTank(erc20Contract, cErc20Contract, borrowCErc20Contract, comptroller);
+        tank = IRariTankFactory(factory).deployTank(erc20Contract, comptroller);
         underlyingToTanks[erc20Contract] = tank;
     }
 
