@@ -1,64 +1,39 @@
 pragma solidity 0.7.3;
 
 /* Interfaces */
-import {IRariFundTank} from "./interfaces/IRariFundTank.sol";
-import {IRariDataProvider} from "./interfaces/IRariDataProvider.sol";
+import {IRariTank} from "../interfaces/IRariTank.sol";
+import {IRariDataProvider} from "../interfaces/IRariDataProvider.sol";
+import {IComptroller} from "../external/compound/IComptroller.sol";
 
-import {IComptroller} from "./external/compound/IComptroller.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {RariTankStorage} from "./RariTankStorage.sol";
 
 /* Libraries */
-import {FusePoolController} from "./lib/FusePoolController.sol";
-import {RariPoolController} from "./lib/RariPoolController.sol";
-import {UniswapController} from "./lib/UniswapController.sol";
+import {FusePoolController} from "../lib/FusePoolController.sol";
+import {RariPoolController} from "../lib/RariPoolController.sol";
+import {UniswapController} from "../lib/UniswapController.sol";
+
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
+/* External */
+import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /**
-    @title RariFundTank
+    @title Rari Tank Delegate
     @author Jet Jadeja <jet@rari.capital>
-    @dev Holds funds, interacts directly with Fuse, and also represents the Rari Tank Token
+    @dev Implementation for the USDC Stable Pool tank
 */
-contract RariFundTank is IRariFundTank, ERC20 {
+contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     /*************
      * Constants *
     *************/
     address private constant BORROWING = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     string private constant BORROWING_SYMBOL = "USDC";
-
-    /*************
-     * Variables *
-    *************/
-    
-    /** @dev The address of the ERC20 token supported by the tank */
-    address public token;
-
-    /** @dev The address of the CErc20 Contract representing the tank's underlying token */
-    address public cToken;
-
-    /** @dev The address of the RariFundManager */
-    address private fundManager;
-
-    /** @dev The address of the RariDataProvider */
-    address private dataProvider;
-    /** 
-        @dev The address of cToken representing the borrowed token 
-        This will be removed when the Comptroller underlying => cToken map is implemented
-    */
-    address private borrowCToken;
-
-    /** @dev The address of the FusePool Comptroller */
-    address private comptroller;
-
-    /** @dev A count of undeposited funds */
-    uint256 private dormantFunds;
-
-    /** @dev The tank's borrow balance */
-    uint256 private borrowBalance;
-
-    /** @dev The tank's stable pool balance */
-    uint256 private stablePoolBalance;
 
     /*************
      * Modifiers *
@@ -71,21 +46,27 @@ contract RariFundTank is IRariFundTank, ERC20 {
     /***************
      * Constructor *
     ***************/
-    constructor(
+    function initialize(
         address _token,
         address _comptroller,
         address _fundManager,
         address _dataProvider
-    ) 
-        ERC20(
-            string(abi.encodePacked("Rari Tank ", ERC20(_token).name())),
-            string(abi.encodePacked("rtt-", ERC20(_token).symbol(), "-USDC"))
-        ) 
+    )
+        external
     {
+        require(!initialized, "Contract already initialized");
+        initialized = true;
+
+        __ERC20_init(
+            string(abi.encodePacked("Rari Tank ", ERC20Upgradeable(_token).name())),
+            string(abi.encodePacked("rtt-", ERC20Upgradeable(_token).symbol(), "-USDC"))
+        );
+
         token = _token;
         comptroller = _comptroller;
         fundManager = _fundManager;
         dataProvider = _dataProvider;
+
 
         cToken = address(IComptroller(_comptroller).getCTokensByUnderlying(token));
         require(cToken != address(0), "Unsupported asset");
@@ -94,14 +75,18 @@ contract RariFundTank is IRariFundTank, ERC20 {
     /********************
     * External Functions *
     ********************/
-    function deposit(address account, uint256 amount) external override onlyFundManager {
-        uint256 mantissa = 18 - ERC20(token).decimals();
+    /** @dev Deposit into the Tank */
+    function deposit(uint256 amount) external override onlyFundManager {
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
         uint256 exchangeRate = exchangeRateCurrent();
 
-        dormantFunds += amount; // Increase the tank's total balance
-        _mint(account, amount.mul(exchangeRate).div(10**mantissa)); // Mints RTT
+        dormant += amount; // Increase the tank's total balance
+        _mint(msg.sender, amount.mul(exchangeRate).div(10**mantissa)); // Mints RTT
     }
-    function withdraw(address account, uint256 amount) external override onlyFundManager {}
+
+    /** @dev Withdraw from the Tank */
+    function withdraw(uint256 amount) external override onlyFundManager {}
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
     function rebalance() external override onlyFundManager {
@@ -119,8 +104,8 @@ contract RariFundTank is IRariFundTank, ERC20 {
         override  
         returns (uint256) 
     {
-        uint256 mantissa = 18 - ERC20(token).decimals();
-        uint256 balance = dormantFunds.add(FusePoolController.balanceOfUnderlying(cToken)).mul(10**mantissa);
+        uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
+        uint256 balance = dormant.add(FusePoolController.balanceOfUnderlying(cToken)).mul(10**mantissa);
         uint256 totalSupply = totalSupply();
 
         if(balance == 0 || totalSupply == 0) return 50e18; // The initial exchange rate should be 50
@@ -135,7 +120,7 @@ contract RariFundTank is IRariFundTank, ERC20 {
     function depositDormantFunds() private {
 
         IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
-        FusePoolController.deposit(token, cToken, dormantFunds);
+        FusePoolController.deposit(token, cToken, dormant);
         
         uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
         uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(IComptroller(comptroller), cToken, balanceOfUnderlying);

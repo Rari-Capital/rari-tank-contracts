@@ -16,9 +16,10 @@ module.exports = {
         url: "https://eth-mainnet.alchemyapi.io/v2/UPMBuJ4TAQrsy9sdb4QSKuanqG1EYR3L",
           //"http://api.rari.capital:21917/",
       },
+      gasPrice:"auto",
     },
     development: {
-      url: "http://localhost:8546",
+      url: "http://localhost:8545",
     }
   },
   compilers: [{ version: "0.7.3" }, { version: "0.6.6" }],
