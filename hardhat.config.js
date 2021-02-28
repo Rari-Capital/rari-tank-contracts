@@ -19,7 +19,7 @@ module.exports = {
       gasPrice:"auto",
     },
     development: {
-      url: "http://localhost:8545",
+      url: "http://localhost:8546",
     }
   },
   compilers: [{ version: "0.7.3" }, { version: "0.6.6" }],
