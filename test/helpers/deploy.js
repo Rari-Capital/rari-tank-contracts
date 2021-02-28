@@ -1,4 +1,5 @@
 const contracts = require("./constants");
+const hre = require("hardhat");
 const ethers = hre.ethers;
 const web3 = hre.web3;
 
@@ -8,8 +9,8 @@ const fuse = new Fuse(web3.currentProvider);
 
 const addresses = require("./constants");
 const selectedAccount = addresses.FUSE_DEPLOYER;
-const [usdc, wbtc, holder] = [addresses.USDC, addresses.WBTC, addresses.HOLDER];
-
+const [usdc, wbtc] = [addresses.USDC, addresses.WBTC, addresses.USDC_HOLDER];
+const [usdcHolder, wbtcHolder] = [addresses.USDC_HOLDER, addresses.WBTC_HOLDER];
 
 
 async function deployFuse() {
@@ -139,42 +140,46 @@ async function deployFusePool() {
   console.log(fUSDC, "fUSDC ADDRESS");
   console.log(fWBTC, "fWBTC ADDRESS");
 
-  deposit(fUSDC, usdc, web3.utils.toBN(1e12), holder);
+  deposit(fUSDC, usdc, web3.utils.toBN(1e12), usdcHolder);
+  deposit(fWBTC, wbtc, web3.utils.toBN(1e8), wbtcHolder);
 
   return [fusePool];
 }
 
 async function deploy() {
-  await deployFuse();
-  const [comptroller]= await deployFusePool();
+  if((await web3.eth.getCode(Fuse.CETHER_DELEGATE_CONTRACT_ADDRESS)).length == 2) {
+    await deployFuse();
+  }
 
-  const RariFundManager = await ethers.getContractFactory("RariFundManager");
+  const [comptroller] = await deployFusePool();
+  const [rebalancer] = await web3.eth.getAccounts();
+
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
+  const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
+
+  const tankDelegate = await RariTankDelegate.deploy()
+  await tankDelegate.deployed();
+  console.log(tankDelegate.address, "TANK_DELEGATE ADDRESS")
 
   const rariDataProvider = await RariDataProvider.deploy();
   await rariDataProvider.deployed();
   console.log(rariDataProvider.address, "DATA PROVIDER ADDRESS");
 
-  const rariFundManager = await RariFundManager.deploy();
-  await rariFundManager.deployed();
-  console.log(rariFundManager.address, "FUND MANAGER ADDRESS");
-
   const rariTankFactory = await RariTankFactory.deploy(
-    rariFundManager.address,
     rariDataProvider.address,
     Fuse.FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS,
+    rebalancer,
   );
   await rariTankFactory.deployed();
   console.log(rariTankFactory.address, "FACTORY ADDRESS");
 
-  rariFundManager.setFactory(rariTankFactory.address);
-  rariFundManager.deployTank(wbtc, comptroller);
+  await rariTankFactory.deployTank(wbtc, comptroller, tankDelegate.address);
+  console.log("deployed");
+  const tank = await rariTankFactory.getTankByImplementation(wbtc, tankDelegate.address)
+  console.log(tank, "TANK ADDRESS");
 
-  const rariFundTankContract = await rariFundManager.getTank(wbtc);
-  console.log(rariFundTankContract, "TANK ADDRESS");
-  
-  return [rariFundManager, rariTankFactory, rariDataProvider];
+  return [rariTankFactory, rariDataProvider, tank];
 }
 
 module.exports = deploy();

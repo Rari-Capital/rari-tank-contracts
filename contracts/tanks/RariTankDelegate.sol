@@ -1,12 +1,16 @@
 pragma solidity 0.7.3;
 
 /* Interfaces */
+import {RariTankStorage} from "./RariTankStorage.sol";
+
 import {IRariTank} from "../interfaces/IRariTank.sol";
 import {IRariDataProvider} from "../interfaces/IRariDataProvider.sol";
+
 import {IComptroller} from "../external/compound/IComptroller.sol";
+import {ICErc20} from "../external/compound/ICErc20.sol";
+import {IPriceFeed} from "../external/compound/IPriceFeed.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {RariTankStorage} from "./RariTankStorage.sol";
 
 /* Libraries */
 import {FusePoolController} from "../lib/FusePoolController.sol";
@@ -38,8 +42,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /*************
      * Modifiers *
     **************/
-    modifier onlyFundManager() {
-        require(msg.sender == address(0), "RariFundTank: Function can only be called by the RariFundManager");
+    modifier onlyFactory() {
+        require(msg.sender != address(0), "RariFundTank: Function can only be called by the rebalancer");
         _;
     }
 
@@ -49,7 +53,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function initialize(
         address _token,
         address _comptroller,
-        address _fundManager,
         address _dataProvider
     )
         external
@@ -64,11 +67,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         token = _token;
         comptroller = _comptroller;
-        fundManager = _fundManager;
         dataProvider = _dataProvider;
 
-
-        cToken = address(IComptroller(_comptroller).getCTokensByUnderlying(token));
+        cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
         require(cToken != address(0), "Unsupported asset");
     }
 
@@ -76,7 +77,20 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     * External Functions *
     ********************/
     /** @dev Deposit into the Tank */
-    function deposit(uint256 amount) external override onlyFundManager {
+    function deposit(uint256 amount) external override  {
+
+        uint256 decimals = ERC20Upgradeable(token).decimals();
+
+        uint256 priceMantissa = 32 - decimals;
+        uint256 price = IRariDataProvider(dataProvider).getUnderlyingPrice(
+            IComptroller(comptroller),
+            cToken
+        );
+        require(
+            price.div(10**priceMantissa).mul(amount).div(10**decimals) >= 500, 
+            "RariTankDelegate: Minimum Deposit Amount is $500"
+        );
+
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
         uint256 exchangeRate = exchangeRateCurrent();
@@ -86,10 +100,10 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /** @dev Withdraw from the Tank */
-    function withdraw(uint256 amount) external override onlyFundManager {}
+    function withdraw(uint256 amount) external override {}
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
-    function rebalance() external override onlyFundManager {
+    function rebalance() external override onlyFactory {
         registerProfit();
         depositDormantFunds();
     }
@@ -136,8 +150,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @dev Register profits and repay interest */
     function registerProfit() private {
         uint256 currentStablePoolBalance = RariPoolController.balanceOf().div(1e12);
-        uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(borrowCToken);
-        
+        uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
+        require(false, "WEEEEENIS PATROLIUM");
+
         uint256 profit = currentStablePoolBalance > stablePoolBalance ? 
             currentStablePoolBalance.sub(stablePoolBalance) : 
             0;
@@ -186,5 +201,15 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         path[0] = BORROWING;
         path[1] = token;
         return UniswapController.swapTokens(path, amount);
+    }
+
+    function price() external view returns(uint256) {
+        uint256 priceMantissa = 32 - ERC20Upgradeable(token).decimals();
+        uint256 priceToken = IRariDataProvider(dataProvider).getUnderlyingPrice(
+            IComptroller(comptroller),
+            cToken
+        );
+
+        return priceToken.div(10**priceMantissa).mul(1).div(1e8);
     }
 }
