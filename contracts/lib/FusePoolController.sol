@@ -54,27 +54,41 @@ library FusePoolController {
     }
 
     /** @dev Borrow a certain amount from Fuse */
-    function borrow(address cErc20Contract, uint256 amount) internal {
-        uint256 error = ICErc20(cErc20Contract).borrow(amount);
+    function borrow(
+        address comptrollerContract, 
+        address erc20Contract, 
+        uint256 amount
+    ) 
+        internal 
+    {
+        uint256 error = getCErc20Contract(comptrollerContract, erc20Contract).borrow(amount);
         require(error == 0, "CErc20: Failed to borrow underlying");
     }
 
     /** @dev Repay a Fuse loan */
-    function repay(address cErc20Contract, uint256 amount) internal {
-        ICErc20 cToken = ICErc20(cErc20Contract);
-        IERC20(cToken.underlying()).approve(cErc20Contract, amount);
+    function repay(address comptroller, address underlying, uint256 amount) internal {
+        ICErc20 cToken = getCErc20Contract(comptroller, underlying);
+        IERC20(cToken.underlying()).approve(address(cToken), amount);
 
-        uint256 error = ICErc20(cErc20Contract).repayBorrow(amount);
+        uint256 error = cToken.repayBorrow(amount);
         require(error == 0, "CErc20: Repay error");
     }
 
-    /** @dev Get the contract's underlying balance */
+    /** @return the contract's underlying balance */
     function balanceOfUnderlying(address cErc20Contract) internal returns (uint256) {
         return ICErc20(cErc20Contract).balanceOfUnderlying(address(this));
     }
 
-    /** @dev Get the contract's current borrow balance */
-    function borrowBalanceCurrent(address cErc20Contract) internal returns (uint256) {
-        return ICErc20(cErc20Contract).borrowBalanceCurrent(address(this));
+    /** @return The contract's current borrow balance */
+    function borrowBalanceCurrent(address comptrollerContract, address erc20Contract) internal returns (uint256) {
+        return getCErc20Contract(comptrollerContract, erc20Contract).borrowBalanceCurrent(address(this));
     }
+
+    /** 
+        @dev Given a comptroller and ERC20 token
+        @return The address of the CErc20 contract representing the ERC20 token
+     */
+     function getCErc20Contract(address comptroller, address underlying) internal view returns (ICErc20) {
+        return IComptroller(comptroller).cTokensByUnderlying(underlying);
+     }
 }

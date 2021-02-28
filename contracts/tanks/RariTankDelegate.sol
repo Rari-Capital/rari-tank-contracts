@@ -78,13 +78,12 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     ********************/
     /** @dev Deposit into the Tank */
     function deposit(uint256 amount) external override  {
-
         uint256 decimals = ERC20Upgradeable(token).decimals();
-
         uint256 priceMantissa = 32 - decimals;
+
         uint256 price = IRariDataProvider(dataProvider).getUnderlyingPrice(
-            IComptroller(comptroller),
-            cToken
+            comptroller,
+            token
         );
         require(
             price.div(10**priceMantissa).mul(amount).div(10**decimals) >= 500, 
@@ -104,8 +103,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
     function rebalance() external override onlyFactory {
-        registerProfit();
         depositDormantFunds();
+        registerProfit();
     }
 
     /*******************
@@ -134,14 +133,12 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function depositDormantFunds() private {
 
         IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
-        FusePoolController.deposit(token, cToken, dormant);
+        FusePoolController.deposit(comptroller, cToken, dormant);
         
         uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
-        uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(IComptroller(comptroller), cToken, balanceOfUnderlying);
+        uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(comptroller, token, balanceOfUnderlying);
         
-        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(IComptroller(comptroller), borrowCToken, borrowAmountUSD);
-
-        //uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(borrowCToken);
+        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD);
 
         if(idealBorrowBalance > borrowBalance) borrow(idealBorrowBalance - borrowBalance);
         if(borrowBalance > idealBorrowBalance) repay(borrowBalance - idealBorrowBalance);
@@ -151,7 +148,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function registerProfit() private {
         uint256 currentStablePoolBalance = RariPoolController.balanceOf().div(1e12);
         uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
-        require(false, "WEEEEENIS PATROLIUM");
 
         uint256 profit = currentStablePoolBalance > stablePoolBalance ? 
             currentStablePoolBalance.sub(stablePoolBalance) : 
@@ -161,22 +157,24 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             currentBorrowBalance.sub(borrowBalance) : 
             0;
 
+        if(profit == 0) return;
+
         RariPoolController.withdraw(BORROWING_SYMBOL, profit);
 
         if(debt > profit) {
-            FusePoolController.repay(borrowCToken, profit);
+            FusePoolController.repay(comptroller, BORROWING, profit);
             return;
         }
 
-        FusePoolController.repay(borrowCToken, debt);
+        FusePoolController.repay(comptroller, BORROWING, debt);
         
-        uint256 underlyingProfit = swapInterestForUnderlying(profit- debt);
+        uint256 underlyingProfit = swapInterestForUnderlying(profit - debt);
         FusePoolController.deposit(comptroller, cToken, underlyingProfit);
     }
 
     /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
     function borrow(uint256 amount) private {
-        FusePoolController.borrow(borrowCToken, amount);
+        FusePoolController.borrow(comptroller, BORROWING, amount);
         borrowBalance += amount;
 
         RariPoolController.deposit(BORROWING_SYMBOL, BORROWING, amount);
@@ -188,7 +186,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         RariPoolController.withdraw(BORROWING_SYMBOL, amount);
         stablePoolBalance -= amount;
 
-        FusePoolController.repay(borrowCToken, amount);
+        FusePoolController.repay(comptroller, BORROWING, amount);
         borrowBalance -= amount;
     }
 
@@ -201,15 +199,5 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         path[0] = BORROWING;
         path[1] = token;
         return UniswapController.swapTokens(path, amount);
-    }
-
-    function price() external view returns(uint256) {
-        uint256 priceMantissa = 32 - ERC20Upgradeable(token).decimals();
-        uint256 priceToken = IRariDataProvider(dataProvider).getUnderlyingPrice(
-            IComptroller(comptroller),
-            cToken
-        );
-
-        return priceToken.div(10**priceMantissa).mul(1).div(1e8);
     }
 }

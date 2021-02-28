@@ -21,5 +21,9 @@ interface ICErc20 {
 
     function exchangeRateCurrent() external returns (uint256);
 
-    function underlying() external returns (address);
+    function underlying() external view returns (address);
+
+    function name() external view returns(string memory);
+
+    function symbol() external view returns(string memory);
 }

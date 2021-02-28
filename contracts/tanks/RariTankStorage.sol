@@ -17,11 +17,6 @@ abstract contract RariTankStorage {
 
     /** @dev The address of the RariDataProvider */
     address internal dataProvider;
-    /** 
-        @dev The address of cToken representing the borrowed token 
-        This will be removed when the Comptroller underlying => cToken map is implemented
-    */
-    address internal borrowCToken;
 
     /** @dev The address of the FusePool Comptroller */
     address internal comptroller;

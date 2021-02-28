@@ -7,6 +7,8 @@ import {ICErc20} from "./external/compound/ICErc20.sol";
 import {IPriceFeed} from "./external/compound/IPriceFeed.sol";
 import {IComptroller} from "./external/compound/IComptroller.sol";
 
+import {AggregatorV3Interface} from "./external/chainlink/AggregatorV3Interface.sol";
+
 /* Libaries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -18,27 +20,38 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 contract RariDataProvider is IRariDataProvider {
     using SafeMath for uint256;
 
+    /*************
+    * Variables *
+    *************/
+
+    AggregatorV3Interface ETH_PRICEFEED = AggregatorV3Interface(
+        0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+    );
+
     /********************
     * External Functions *
     ********************/
 
     /** @return The current borrow balance of the user */
-    function borrowBalanceCurrent(ICErc20 cToken) external override returns (uint256) {
-        return cToken.borrowBalanceCurrent(msg.sender);
+    function borrowBalanceCurrent(address comptroller, address underlying) external override returns (uint256) {
+        return getCErc20Contract(comptroller, underlying)
+            .borrowBalanceCurrent(msg.sender);
     }
 
     /** 
         @dev Given a certain amount of underlying tokens, use the exchange rate to calculate the equivalent amount in CErc20 tokens
     */
     function convertUnderlyingToCErc20(
-        ICErc20 cToken, 
+        address comptroller,
+        address underlying, 
         uint256 amount
     )
         external 
         override 
         returns (uint256) 
     {
-        uint256 exchangeRate = cToken.exchangeRateCurrent();
+        uint256 exchangeRate = getCErc20Contract(comptroller, underlying)
+            .exchangeRateCurrent();
         return amount.mul(1e18).div(exchangeRate);
     }
 
@@ -46,14 +59,16 @@ contract RariDataProvider is IRariDataProvider {
         @dev Given a certain amount of cErc20 tokens, use the exchange rate to calculate the equivalent amount in underlying tokens
     */
     function convertCErc20ToUnderlying(
-        ICErc20 cToken, 
+        address comptroller, 
+        address underlying, 
         uint256 amount
     ) 
         external 
         override 
         returns (uint256) 
     {
-        uint256 exchangeRate = cToken.exchangeRateCurrent();
+        uint256 exchangeRate = getCErc20Contract(comptroller, underlying)
+            .exchangeRateCurrent();
         return amount.mul(exchangeRate).div(1e18);
     }
 
@@ -62,41 +77,43 @@ contract RariDataProvider is IRariDataProvider {
         @param amount The amount of underlying tokens
         @return The maximum USD that can be borrowed, scaled by 1e18
     */
-    function maxBorrowAmountUSD(
-        IComptroller comptroller, 
-        address cErc20Contract, 
+    function maxBorrowAmountUSD (
+        address comptrollerContract, 
+        address underlying,
         uint256 amount
     ) 
-        external 
+        external
+        view
         override 
         returns (uint256) 
     {
-        IPriceFeed priceFeed = comptroller.oracle();
+        IComptroller comptroller = IComptroller(comptrollerContract);
+        address cErc20Contract = address(comptroller.cTokensByUnderlying(underlying));
 
-        (, uint256 collateralFactor, ) = comptroller.markets(cErc20Contract);
-        uint256 price = _getUnderlyingPrice(priceFeed, cErc20Contract);
+        (, uint256 collateralFactor) = comptroller.markets(cErc20Contract);
+        uint256 price = _getUnderlyingPrice(comptrollerContract, underlying);
         uint256 balanceUSD = amount.mul(price).div(1e18);
 
         return balanceUSD.mul(collateralFactor).div(1e18);
     }
 
-    /** @return The price of the underlying asset */
+    /** @return The price of the underlying asset in USD */
     function getUnderlyingPrice(
-        IComptroller comptroller, 
-        address cErc20Contract
+        address comptroller,
+        address underlying
     ) 
         external 
         view 
-        override 
+        override
         returns (uint256) 
     {
-        return _getUnderlyingPrice(comptroller.oracle(), cErc20Contract);
+        return _getUnderlyingPrice(comptroller, underlying);
     }
 
     /** @dev Given a certain USD amount (scaled by 1e18), use the price feed to calculate the equivalent value in underlying tokens */
     function convertUSDToUnderlying(
-        IComptroller comptroller, 
-        address cErc20Contract, 
+        address comptroller, 
+        address underlying, 
         uint256 amount
     ) 
         external 
@@ -104,7 +121,7 @@ contract RariDataProvider is IRariDataProvider {
         override 
         returns (uint256) 
     {
-        uint256 price = _getUnderlyingPrice(comptroller.oracle(), cErc20Contract);
+        uint256 price = _getUnderlyingPrice(comptroller, underlying);
         return amount.mul(1e18).div(price);
     }
 
@@ -114,13 +131,29 @@ contract RariDataProvider is IRariDataProvider {
 
     /** @return The price of the underlying asset */
     function _getUnderlyingPrice(
-        IPriceFeed priceFeed, 
-        address cErc20Contract
+        address comptrollerContract, 
+        address underlying
     ) 
         internal 
         view 
         returns (uint256)
     {
-        return priceFeed.getUnderlyingPrice(cErc20Contract);
+        IComptroller comptroller = IComptroller(comptrollerContract);
+        IPriceFeed priceFeed = IPriceFeed(comptroller.oracle());
+        ICErc20 cErc20 = getCErc20Contract(comptrollerContract, underlying);
+        (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
+        
+        return priceFeed
+            .getUnderlyingPrice(cErc20)
+            .mul(uint256(ethPrice))
+            .div(1e12);
     }
+
+    /** 
+        @dev Given a comptroller and ERC20 token
+        @return the address of the CErc20 contract representing the ERC20 token
+    */
+     function getCErc20Contract(address comptroller, address underlying) internal view returns (ICErc20) {
+        return IComptroller(comptroller).cTokensByUnderlying(underlying);
+     }
 }

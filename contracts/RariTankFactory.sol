@@ -1,10 +1,11 @@
 pragma solidity ^0.7.3;
 
 /* Contracts */
-import {RariTankDelegate} from "./tanks/RariTankDelegate.sol";
+import {RariTankDelegator} from "./RariTankDelegator.sol";
 
 /* Interfaces */
 import {IRariTankFactory} from "./interfaces/IRariTankFactory.sol";
+import {IRariTank} from "./interfaces/IRariTank.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ICErc20} from "./external/compound/ICErc20.sol";
@@ -27,18 +28,22 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     /** @dev The address of the FusePoolDirectory */
     address private fusePoolDirectory;
 
-    /** @dev Maps the underlying token to a map from implementation to token  */
+    /** @dev The address of the rebalancer */
+    address private rebalancer;
+
+    /** @dev Maps the underlying token to a map from implementation to tank  */
     mapping(address => mapping(address => address)) private tanksByImplementation;
 
     /** @dev Maps the underlying token to an array of tanks supporting it */
-    mapping(address => address) private tanksByUnderlying;
+    mapping(address => address[]) private tanksByUnderlying;
 
     /***************
      * Constructor *
     ***************/
-    constructor(address _dataProvider, address _fusePoolDirectory) {
+    constructor(address _dataProvider, address _fusePoolDirectory, address _rebalancer) {
         dataProvider = _dataProvider;
         fusePoolDirectory = _fusePoolDirectory;
+        rebalancer = _rebalancer;
     }
 
     /********************
@@ -58,7 +63,42 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     function deployTank(address erc20Contract, address comptroller, address implementation) external override returns (address) {
         // Input validation
         require(IFusePoolDirectory(fusePoolDirectory).poolExists(comptroller), "RariTankFactory: Invalid Pool");
-        //RariTankDelegate tank = new RariFundTank(erc20Contract, comptroller, fundManager, dataProvider);
+
+        RariTankDelegator tank = new RariTankDelegator(
+            erc20Contract, 
+            comptroller, 
+            dataProvider,
+            implementation
+        );
+
+        tanksByImplementation[erc20Contract][implementation] = address(tank);
+        tanksByUnderlying[erc20Contract].push(address(tank));
+
         return erc20Contract;
+    }
+
+    /*****************
+    * View Functions *
+    ******************/
+    /** 
+        @dev Given a token
+        @return a list of tanks that support it 
+    */
+    function getTanksByUnderlying(address erc20Contract) external view returns (address[] memory) {
+        address[] memory tanks = tanksByUnderlying[erc20Contract];
+        return tanks;
+    }
+
+    /** 
+        @dev Given an token and implementation address 
+        @return tank that supports the token and uses the implementation contract
+    */
+    function getTankByImplementation(address erc20Contract, address implementation) external view returns (address) {
+        return tanksByImplementation[erc20Contract][implementation];
+    }
+
+    function rebalance(address tank) external {
+        require(msg.sender == rebalancer, "RariTankFactory: Must be called by the rebalancer");
+        IRariTank(tank).rebalance();
     }
 }
