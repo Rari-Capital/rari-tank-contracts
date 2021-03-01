@@ -15,18 +15,18 @@ var openOracleContracts = require(__dirname + "/contracts/open-oracle.min.json")
 
 module.exports = class Fuse {
   static FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS =
-    "0xeE8163c19f2ff59410EDc6494505c129BDDd3851"; // TODO: Set correct mainnet address after deployment
+    "0xbc33E27817C6df9032204B837ac8d49D11c54aCB"; // TODO: Set correct mainnet address after deployment
   static FUSE_SAFE_LIQUIDATOR_CONTRACT_ADDRESS =
-    "0x8A0AB5A52dDCF13a9D5b68F7961289F5E08Ebc5f"; // TODO: Set correct mainnet address after deployment
+    "0x9EA5667957E4C2bf2d89e64f8BA6F524431D5168"; // TODO: Set correct mainnet address after deployment
   static FUSE_FEE_DISTRIBUTOR_CONTRACT_ADDRESS =
-    "0x4084A1CEb13516eEaa03a047679cE64DF5c7476A"; // TODO: Set correct mainnet address after deployment
+    "0x41D213813431A91d8f9057fd2Cd9341E49838563"; // TODO: Set correct mainnet address after deployment
 
   static COMPTROLLER_IMPLEMENTATION_CONTRACT_ADDRESS =
-    "0x4570ef886C3CA0B382739054e18192E2dA979015"; // TODO: Set correct mainnet address after deployment
+    "0xBfA88063961d2F694655ef58744b658E6e4dF4C1"; // TODO: Set correct mainnet address after deployment
   static CERC20_DELEGATE_CONTRACT_ADDRESS =
-    "0x8BEaA629AAEEe4cEc56B1e4c3Ec58270DC7DAaE6"; // TODO: Set correct mainnet address after deployment
+    "0xb7865f28501cDe73d77285e9cb64200411708445"; // TODO: Set correct mainnet address after deployment
   static CETHER_DELEGATE_CONTRACT_ADDRESS =
-    "0x181EaB6569246e7Ee652E029c4a096513d891659"; // TODO: Set correct mainnet address after deployment
+    "0x847443cFbA257E858D49E17C3255eB61fb667771"; // TODO: Set correct mainnet address after deployment
 
   static OPEN_ORACLE_PRICE_DATA_CONTRACT_ADDRESS =
     "0xc629c26dced4277419cde234012f8160a0278a79";
@@ -34,7 +34,7 @@ module.exports = class Fuse {
     "0xfCEAdAFab14d46e20144F48824d0C09B1a03F2BC";
 
   static PUBLIC_PREFERRED_PRICE_ORACLE_CONTRACT_ADDRESS =
-    "0xe43442bCac98a68C1Ae1DDa08307f8cB5b136355"; // TODO: Set correct mainnet address after deployment
+    "0xB816f91604a2c1D6d9765d52438F59f742429466"; // TODO: Set correct mainnet address after deployment
   static PUBLIC_CHAINLINK_PRICE_ORACLE_CONTRACT_ADDRESS =
     "0x026838c33c05cace3495bfe51261f7d942fddf8a"; // TODO: Set correct mainnet address after deployment
   static PUBLIC_UNISWAP_VIEW_CONTRACT_ADDRESS =

@@ -147,10 +147,7 @@ async function deployFusePool() {
 }
 
 async function deploy() {
-  if((await web3.eth.getCode(Fuse.CETHER_DELEGATE_CONTRACT_ADDRESS)).length == 2) {
-    await deployFuse();
-  }
-
+  await deployFuse();
   const [comptroller] = await deployFusePool();
   const [rebalancer] = await web3.eth.getAccounts();
 
@@ -162,6 +159,16 @@ async function deploy() {
   await tankDelegate.deployed();
   console.log(tankDelegate.address, "TANK_DELEGATE ADDRESS")
 
+  await hre.tenderly.persistArtifacts({
+    name: "RariTankDelegate",
+    address: tankDelegate.address
+  });
+  
+  await hre.tenderly.verify({
+    name: "RariTankDelegate",
+    address: tankDelegate.address,
+  });
+
   const rariDataProvider = await RariDataProvider.deploy();
   await rariDataProvider.deployed();
   console.log(rariDataProvider.address, "DATA PROVIDER ADDRESS");
@@ -171,6 +178,7 @@ async function deploy() {
     Fuse.FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS,
     rebalancer,
   );
+
   await rariTankFactory.deployed();
   console.log(rariTankFactory.address, "FACTORY ADDRESS");
 

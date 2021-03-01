@@ -32,28 +32,39 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
         [rebalancer] = await ethers.getSigners();
     });
 
-    describe("Fuse interactions", async () => {
+    describe("External interactions", async () => {
         it("Supplies funds to Fuse, mints fTokens", async () => {
             await rariTankFactory.rebalance(tank.address);
+            const cTokenContract = await tank.cToken();
+            const cToken = await ethers.getContractAt(ERC20ABI, cTokenContract);
+
+            await cToken
+                .balanceOf(tank.address)
+                .should.eventually.equal("100000000");
         });
 
-        it("Borrows USDC from Fuse", async () => {
-
+        it("Borrows USDC, deposits into stable pool, mints RSPT", async () => {
+            const rspt = await ethers.getContractAt(ERC20ABI, constants.RSPT);
+            console.log((await rspt.balanceOf(tank.address)).toString());
+            chai.expect((await rspt.balanceOf(tank.address)).gt(0) == true);
         });
-    });
 
-    describe("Stable Pool Interactions", async () => {
-        it("Deposits into stable pool, mints RSPT", async () => {});
+        it("Earning yield increases exchangeRate", async () => {
+            const usdc = await ethers.getContractAt(ERC20ABI, constants.USDC);
+            const usdc_holder = await ethers.provider.getSigner(constants.USDC_HOLDER);
 
+            usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "10000000000000")
+            await rariTankFactory.rebalance(tank.address);
+        })
     });
 
     describe("Withdrawals", async () => {
-        before(async () => {}); // Withdraw funds
-        it("Repays borrowed funds", async () => {
-
+        it("Able to withdraw more than initial deposit", async () => {
+            await tank.connect(user).withdraw("100000500");
         });
 
-        it("Withdraws supplied WBTC", async () => {})
+        it("Withdraws supplied WBTC", async () => {
+        })
 
     });
 
