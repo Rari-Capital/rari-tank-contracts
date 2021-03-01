@@ -14,13 +14,19 @@ module.exports = {
     hardhat: {
       forking: {
         url: "https://eth-mainnet.alchemyapi.io/v2/UPMBuJ4TAQrsy9sdb4QSKuanqG1EYR3L",
-          //"http://api.rari.capital:21917/",
+        blockNumber: 11911184,
       },
-      gasPrice:"auto",
+      gas: 8000000,
+      blockGasLimit: 8000000,
+      gasPrice: 0,
+      timeout: 100000,
     },
     development: {
-      url: "http://localhost:8546",
-    }
+      url: "http://localhost:8545",
+      gas: 8000000,
+      blockGasLimit: 8000000,
+      gasPrice: 0,
+    },
   },
   compilers: [{ version: "0.7.3" }, { version: "0.6.6" }],
   paths: {

@@ -48,8 +48,10 @@ library FusePoolController {
     }
 
     /** @dev Withdraw from Fuse */
-    function withdrawal(address cErc20Contract, uint256 amount) internal {
-        uint256 error = ICErc20(cErc20Contract).redeemUnderlying(amount);
+    function withdraw(address comptroller, address underlying, uint256 amount) internal {
+        uint256 error = IComptroller(comptroller)
+            .cTokensByUnderlying(underlying)
+            .redeemUnderlying(amount);
         require(error == 0, "CErc20: Failed to redeem underlying");
     }
 
