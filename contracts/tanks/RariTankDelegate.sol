@@ -20,8 +20,6 @@ import {UniswapController} from "../lib/UniswapController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import {console} from "hardhat/console.sol";
-
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -63,7 +61,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         initialized = true;
 
         __ERC20_init(
-            string(abi.encodePacked("Rari Tank ", ERC20Upgradeable(_token).name())),
+            string(abi.encodePacked("Tank ", ERC20Upgradeable(_token).name())),
             string(abi.encodePacked("rtt-", ERC20Upgradeable(_token).symbol(), "-USDC"))
         );
 
@@ -102,24 +100,19 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Withdraw from the Tank */
     function withdraw(uint256 amount) external override {
-        uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
-        uint256 exchangeRate = exchangeRateCurrent();
+        uint256 balance = underlyingBalanceOf(msg.sender);
 
-        uint256 withdrawalAmount = amount.mul(exchangeRate).div(10**mantissa);
+        require(
+            balance > amount,
+            "RariTankDelegate: Withdrawal amount must be less than balance"
+        );
 
-        console.log(exchangeRate, "exchange rate");
-        console.log(balanceOf(msg.sender), "Sender Balance");
-        console.log(withdrawalAmount, "Withdrawal Amount");
-
-        require(withdrawalAmount < balanceOf(msg.sender), "RariTankDelegate: Withdrawal amount must be less than balance");
-        console.log("Less than balance");
         _withdraw(amount);
         IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
     function rebalance() external override onlyFactory {
-        console.log("Initial Balance", RariPoolController.balanceOf());
         if(dormant > 0) depositDormantFunds();
         registerProfit();
     }
@@ -138,8 +131,17 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 balance = dormant.add(FusePoolController.balanceOfUnderlying(cToken)).mul(10**mantissa);
         uint256 totalSupply = totalSupply();
 
-        if(balance == 0 || totalSupply == 0) return 50e18; // The initial exchange rate should be 50
+        if(balance == 0 || totalSupply == 0) return 1e18; // The initial exchange rate should be 1
         return balance.mul(1e18).div(totalSupply);
+    }
+
+    /** @dev Get an address's underlying balance */
+    function underlyingBalanceOf(address account) public returns (uint256) {
+        uint256 tankTokenBalance = balanceOf(account);
+        uint256 mantissa = 36 - ERC20Upgradeable(token).decimals();
+        uint256 exchangeRate = exchangeRateCurrent();
+
+        return tankTokenBalance.mul(exchangeRate).div(10**mantissa);
     }
 
     /********************
@@ -193,28 +195,20 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function _withdraw(uint256 amount) private {
         // Return if the amount being withdrew is less than or equal the amount of dormant funds
         if (amount <= dormant) return; 
-        console.log("Amount wasn't less than dormant");
         // Calculate the amount that must be returned
         uint256 maxBorrow = 
             IRariDataProvider(dataProvider).maxBorrowAmountUSD(comptroller, token, amount);
-
-        console.log("Max borrow", maxBorrow);
 
         uint256 due = IRariDataProvider(dataProvider)
             .convertUSDToUnderlying(comptroller, BORROWING, maxBorrow)
             .div(2);
 
-        console.log("Due", due);
-
         // Withdraw and repay
         RariPoolController.withdraw(BORROWING_SYMBOL, due);
-        console.log("Withdrew", due);
         FusePoolController.repay(comptroller, BORROWING, due);
-        console.log("Repaid", due);
 
         // Withdraw funds from Fuse
         FusePoolController.withdraw(comptroller, token, amount);
-        console.log("Withdrew", amount);
     }
 
     /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
@@ -222,10 +216,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         FusePoolController.borrow(comptroller, BORROWING, amount);
         borrowBalance += amount;
 
-        console.log("Rari Balance", RariPoolController.balanceOf());
         RariPoolController.deposit(BORROWING_SYMBOL, BORROWING, amount);
         stablePoolBalance += amount;
-        console.log("Rari Balance", RariPoolController.balanceOf());
+
     }
 
     /** @dev Withdraw a stable asset from Rari and repay  */

@@ -52,6 +52,7 @@ library FusePoolController {
         uint256 error = IComptroller(comptroller)
             .cTokensByUnderlying(underlying)
             .redeemUnderlying(amount);
+
         require(error == 0, "CErc20: Failed to redeem underlying");
     }
 
