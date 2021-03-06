@@ -45,7 +45,6 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
 
         it("Borrows USDC, deposits into stable pool, mints RSPT", async () => {
             const rspt = await ethers.getContractAt(ERC20ABI, constants.RSPT);
-            console.log((await rspt.balanceOf(tank.address)).toString());
             chai.expect((await rspt.balanceOf(tank.address)).gt(0) == true);
         });
 
@@ -60,12 +59,12 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
 
     describe("Withdrawals", async () => {
         it("Able to withdraw more than initial deposit", async () => {
+
             await tank.connect(user).withdraw("100000500");
         });
 
-        it("Withdraws supplied WBTC", async () => {
-        })
-
+        it("Reverts if withdrawal amount is too large", async () => {
+            await tank.connect(user).withdraw("2000000000").should.be.rejectedWith("revert RariTankDelegate");
+        });
     });
-
 });

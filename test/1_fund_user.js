@@ -29,6 +29,7 @@ describe("RariTankDelegator, RariTankDelegate, RariDataProvider", async function
         tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
         console.log("\n\n\n\n\n");
         wbtc = await ethers.getContractAt(ERC20ABI, constants.WBTC);
+        console.log("RariTankDelegator, RariTankDelegate, RariDataProvider");
     })
 
     describe("Deposits function correctly", async () => {
@@ -37,7 +38,7 @@ describe("RariTankDelegator, RariTankDelegate, RariDataProvider", async function
             await tank.deposit("100000000");
             await tank
                 .totalSupply()
-                .should.eventually.equal("500000000000000000");
+                .should.eventually.equal("10000000000000000");
         });
 
         it("Reverts if deposit amount is below $500", async () => {
