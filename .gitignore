@@ -4,5 +4,4 @@ cache
 .editorconfig
 coverage
 tests
-
-!node_modules/fuse-sdk
+deployments
