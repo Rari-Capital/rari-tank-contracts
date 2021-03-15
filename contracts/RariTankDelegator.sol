@@ -39,16 +39,6 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
         );
     }
 
-    function delegateTo(address callee, bytes memory data) internal returns (bytes memory) {
-        (bool success, bytes memory returnData) = callee.delegatecall(data);
-        assembly {
-            if eq(success, 0) {
-                revert(add(returnData, 0x20), returndatasize())
-            }
-        }
-        return returnData;
-    }
-
     fallback () external payable {
         require(msg.value == 0, "RariTankDelegator: Cannot send funds to contract");
         (bool success, ) = implementation.delegatecall(msg.data);
@@ -62,4 +52,16 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
             default { return(free_mem_ptr, returndatasize()) }
         }
     }
+
+    function delegateTo(address callee, bytes memory data) internal returns (bytes memory) {
+        (bool success, bytes memory returnData) = callee.delegatecall(data);
+        assembly {
+            if eq(success, 0) {
+                revert(add(returnData, 0x20), returndatasize())
+            }
+        }
+        return returnData;
+    }
+
+    receive() external payable {}
 }

@@ -11,11 +11,11 @@ import {ICErc20} from "../external/compound/ICErc20.sol";
 import {IPriceFeed} from "../external/compound/IPriceFeed.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IUniswapV2Router02} from "../external/uniswapv2/IUniswapV2Router.sol";
 
 /* Libraries */
 import {FusePoolController} from "../lib/FusePoolController.sol";
 import {RariPoolController} from "../lib/RariPoolController.sol";
-import {UniswapController} from "../lib/UniswapController.sol";
 
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -32,12 +32,6 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-
-    /*************
-     * Constants *
-    *************/
-    address private constant BORROWING = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    string private constant BORROWING_SYMBOL = "USDC";
 
     /*************
      * Modifiers *
@@ -76,25 +70,61 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /********************
     * External Functions *
     ********************/
+    
     /** @dev Deposit into the Tank */
     function deposit(uint256 amount) external override  {
         uint256 decimals = ERC20Upgradeable(token).decimals();
-        uint256 priceMantissa = 32 - decimals;
+        uint256 priceMantissa = 36 - decimals;
 
-        uint256 price = IRariDataProvider(dataProvider).getUnderlyingPrice(
+        uint256 price = IRariDataProvider(dataProvider).getUnderlyingInEth(
             comptroller,
             token
         );
+
+        uint256 deposited = price.mul(amount).div(10**priceMantissa);
+        uint256 priceInEth = price
+            .div(10 ** (priceMantissa - 18))
+            .mul(amount)
+            .div(10**decimals);
+        
         require(
-            price.div(10**priceMantissa).mul(amount).div(10**decimals) >= 500, 
+            deposited.div(10**decimals) >= 1, 
             "RariTankDelegate: Minimum Deposit Amount is $500"
         );
 
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
-        uint256 exchangeRate = exchangeRateCurrent();
 
+        if(paid <= 3e17) {
+            uint256 left = 3e17 - paid;
+
+            address[] memory path = new address[](2);
+            path[0] = token;
+            path[1] = ROUTER.WETH();
+
+            if(priceInEth.div(20) > left) {
+                IERC20(token).approve(address(ROUTER), amount.div(20));
+
+                uint256[] memory amounts = ROUTER.swapTokensForExactETH(
+                    left,
+                    amount.div(20),
+                    path, 
+                    address(this), 
+                    block.timestamp
+                );
+
+                amount -= amounts[0];
+            }
+
+            else {
+                //UniswapController.swapETH(token, price.div(20));
+                //amount -= price.div(20);
+            }
+        }
+
+        uint256 mantissa = 18 - decimals;
+        uint256 exchangeRate = exchangeRateCurrent();
         dormant += amount; // Increase the tank's total balance
+
         _mint(msg.sender, amount.mul(exchangeRate).div(10**mantissa)); // Mints RTT
     }
 
@@ -218,10 +248,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         RariPoolController.deposit(BORROWING_SYMBOL, BORROWING, amount);
         stablePoolBalance += amount;
-
     }
 
-    /** @dev Withdraw a stable asset from Rari and repay  */
+    /** @dev Withdraw a stable asset from Rari and repay */
     function repay(uint256 amount) private {
         RariPoolController.withdraw(BORROWING_SYMBOL, amount);
         stablePoolBalance -= amount;
@@ -238,6 +267,10 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         address[] memory path = new address[](2);
         path[0] = BORROWING;
         path[1] = token;
-        return UniswapController.swapTokens(path, amount);
+
+        IERC20(BORROWING).approve(address(ROUTER), amount);
+        return ROUTER.swapExactTokensForTokens(amount, 0, path, address(this), block.timestamp)[1];
     }
+
+    receive() external payable {}
 }
