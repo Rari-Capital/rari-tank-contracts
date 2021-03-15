@@ -154,20 +154,11 @@ async function deploy() {
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
+  const WETH = await ethers.getContractFactory("WETH");
 
-  const tankDelegate = await RariTankDelegate.deploy()
+  const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
-  console.log(tankDelegate.address, "TANK_DELEGATE ADDRESS")
-
-  await hre.tenderly.persistArtifacts({
-    name: "RariTankDelegate",
-    address: tankDelegate.address
-  });
-  
-  await hre.tenderly.verify({
-    name: "RariTankDelegate",
-    address: tankDelegate.address,
-  });
+  console.log(tankDelegate.address, "TANK_DELEGATE ADDRESS");
 
   const rariDataProvider = await RariDataProvider.deploy();
   await rariDataProvider.deployed();

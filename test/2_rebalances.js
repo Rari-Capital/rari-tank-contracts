@@ -52,14 +52,20 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
             const usdc = await ethers.getContractAt(ERC20ABI, constants.USDC);
             const usdc_holder = await ethers.provider.getSigner(constants.USDC_HOLDER);
 
-            usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "10000000000000")
+            usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "100000000000000");
+
+            for (i = 0; i < 3000; i++) {
+                await hre.network.provider.request({
+                  method: "evm_mine",
+                });
+            }
+
             await rariTankFactory.rebalance(tank.address);
         })
     });
 
     describe("Withdrawals", async () => {
         it("Able to withdraw more than initial deposit", async () => {
-
             await tank.connect(user).withdraw("100000500");
         });
 
