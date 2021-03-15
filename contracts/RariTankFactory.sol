@@ -12,12 +12,20 @@ import {ICErc20} from "./external/compound/ICErc20.sol";
 import {IComptroller} from "./external/compound/IComptroller.sol";
 import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
 
+import {IKeep3r} from "./external/keep3r/IKeep3r.sol";
+
 /**
     @title RariTankFactory
     @author Jet Jadeja
     @dev Deploys RariFundTank implementations
 */
 contract RariTankFactory is IRariTankFactory, Ownable {
+
+    /*************
+    * Constants *
+    *************/
+    IKeep3r internal constant KPR = IKeep3r(0x30f3581Ef6469334c8752d9B6ca3FB39c72f57F1);
+
     /*************
     * Variables *
     *************/
@@ -36,6 +44,15 @@ contract RariTankFactory is IRariTankFactory, Ownable {
 
     /** @dev Maps the underlying token to an array of tanks supporting it */
     mapping(address => address[]) private tanksByUnderlying;
+
+    /*************
+     * Modifiers *
+    **************/
+    modifier keep() {
+        require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
+        _;
+        KPR.worked(msg.sender);
+    }
 
     /***************
      * Constructor *
