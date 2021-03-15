@@ -17,5 +17,6 @@ interface IRariDataProvider {
     function convertCErc20ToUnderlying(address, address, uint256) external returns (uint256);
     function convertUSDToUnderlying(address, address, uint256) external returns (uint256);
 
+    function getUnderlyingInEth(address, address) external returns (uint256);
     function getUnderlyingPrice(address, address) external returns (uint256);
 }

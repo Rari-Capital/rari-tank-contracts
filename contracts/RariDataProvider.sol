@@ -97,6 +97,18 @@ contract RariDataProvider is IRariDataProvider {
         return balanceUSD.mul(collateralFactor).div(1e18);
     }
 
+    function getUnderlyingInEth(
+        address comptroller, 
+        address underlying
+    ) 
+        external
+        view 
+        override
+        returns (uint256) 
+        {
+            return _getUnderlyingInEth(comptroller, underlying);
+        }
+
     /** @return The price of the underlying asset in USD */
     function getUnderlyingPrice(
         address comptroller,
@@ -129,6 +141,20 @@ contract RariDataProvider is IRariDataProvider {
     * Internal Functions *
     ********************/
 
+    /** @dev Return the price of the underlying asset relative to ETH */
+    function _getUnderlyingInEth(
+        address comptrollerContract,
+        address underlying
+    ) internal view returns (uint256) {
+        IPriceFeed priceFeed = IPriceFeed(
+            IComptroller(comptrollerContract).oracle()
+        );
+        ICErc20 cErc20 = getCErc20Contract(comptrollerContract, underlying);
+
+        return priceFeed
+            .getUnderlyingPrice(cErc20);
+    }
+
     /** @return The price of the underlying asset */
     function _getUnderlyingPrice(
         address comptrollerContract, 
@@ -138,13 +164,10 @@ contract RariDataProvider is IRariDataProvider {
         view 
         returns (uint256)
     {
-        IComptroller comptroller = IComptroller(comptrollerContract);
-        IPriceFeed priceFeed = IPriceFeed(comptroller.oracle());
-        ICErc20 cErc20 = getCErc20Contract(comptrollerContract, underlying);
+        uint256 price = _getUnderlyingInEth(comptrollerContract, underlying);
         (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
         
-        return priceFeed
-            .getUnderlyingPrice(cErc20)
+        return price
             .mul(uint256(ethPrice))
             .div(1e12);
     }
