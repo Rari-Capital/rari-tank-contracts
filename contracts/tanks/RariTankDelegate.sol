@@ -114,6 +114,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
                     address(this), 
                     block.timestamp
                 );
+                
                 KPR.addCreditETH{value: amounts[1]}(factory);
                 amount -= amounts[0];
             }
