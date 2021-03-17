@@ -20,6 +20,8 @@ import {RariPoolController} from "../lib/RariPoolController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+import "hardhat/console.sol";
+
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -47,6 +49,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function initialize(
         address _token,
         address _comptroller,
+        address _factory,
         address _dataProvider
     )
         external
@@ -61,6 +64,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         token = _token;
         comptroller = _comptroller;
+        factory = _factory;
         dataProvider = _dataProvider;
 
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
@@ -81,14 +85,13 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             token
         );
 
-        uint256 deposited = price.mul(amount).div(10**priceMantissa);
-        uint256 priceInEth = price
+        uint256 deposited = price
             .div(10 ** (priceMantissa - 18))
             .mul(amount)
             .div(10**decimals);
         
         require(
-            deposited.div(10**decimals) >= 1, 
+            deposited >= 1e18, 
             "RariTankDelegate: Minimum Deposit Amount is $500"
         );
 
@@ -101,7 +104,21 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             path[0] = token;
             path[1] = ROUTER.WETH();
 
-            if(priceInEth.div(20) > left) {
+            if(deposited.div(20) > left) {
+                IERC20(token).approve(address(ROUTER), amount.div(20));
+
+                uint256[] memory amounts = ROUTER.swapTokensForExactETH(
+                    left,
+                    amount.div(20),
+                    path, 
+                    address(this), 
+                    block.timestamp
+                );
+                KPR.addCreditETH{value: amounts[1]}(factory);
+                amount -= amounts[0];
+            }
+
+            else {
                 IERC20(token).approve(address(ROUTER), amount.div(20));
 
                 uint256[] memory amounts = ROUTER.swapTokensForExactETH(
@@ -113,17 +130,16 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
                 );
 
                 amount -= amounts[0];
-            }
-
-            else {
-                //UniswapController.swapETH(token, price.div(20));
-                //amount -= price.div(20);
+                KPR.addCreditETH{value: amounts[1]}(factory);
             }
         }
 
+        console.log(amount);
+        console.log(IERC20(token).balanceOf(address(this)));
+
         uint256 mantissa = 18 - decimals;
         uint256 exchangeRate = exchangeRateCurrent();
-        dormant += amount; // Increase the tank's total balance
+        dormant += amount; // Increase the tank's total dormant balance
 
         _mint(msg.sender, amount.mul(exchangeRate).div(10**mantissa)); // Mints RTT
     }

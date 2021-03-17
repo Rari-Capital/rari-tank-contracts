@@ -24,7 +24,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     /*************
     * Constants *
     *************/
-    IKeep3r internal constant KPR = IKeep3r(0x30f3581Ef6469334c8752d9B6ca3FB39c72f57F1);
+    IKeep3r internal constant KPR = IKeep3r(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
 
     /*************
     * Variables *
@@ -84,6 +84,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
         RariTankDelegator tank = new RariTankDelegator(
             erc20Contract, 
             comptroller, 
+            address(this),
             dataProvider,
             implementation
         );

@@ -12,6 +12,8 @@ const selectedAccount = addresses.FUSE_DEPLOYER;
 const [usdc, wbtc] = [addresses.USDC, addresses.WBTC, addresses.USDC_HOLDER];
 const [usdcHolder, wbtcHolder] = [addresses.USDC_HOLDER, addresses.WBTC_HOLDER];
 
+const Keep3rABI = require("../abi/Keep3r.json")
+
 
 async function deployFuse() {
   const preferredPriceOracle = await fuse.deployPriceOracle(
@@ -154,7 +156,6 @@ async function deploy() {
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
-  const WETH = await ethers.getContractFactory("WETH");
 
   const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
@@ -172,6 +173,12 @@ async function deploy() {
 
   await rariTankFactory.deployed();
   console.log(rariTankFactory.address, "FACTORY ADDRESS");
+
+  // Add the tank factory as a Keep3r job
+  const governance = await ethers.provider.getSigner(addresses.KEEP3R_GOVERNANCE);
+  const keep3r = await ethers.getContractAt(Keep3rABI, addresses.KEEP3R);
+
+  keep3r.connect(governance).addJob(rariTankFactory.address);
 
   await rariTankFactory.deployTank(wbtc, comptroller, tankDelegate.address);
   console.log("deployed");
