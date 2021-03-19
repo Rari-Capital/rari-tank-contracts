@@ -16,7 +16,7 @@ const constants = require("./helpers/constants");
 
 const RariTankDelegatorABI = require("./abi/RariFundTank.json");
 const ERC20ABI = require("./abi/ERC20.json");
-let rariTankFactory, rariDataProvider, tank, wbtc;
+let rariTankFactory, rariDataProvider, tank, wbtc, keeper;
 let user, deployer, rebalancer;
 
 
@@ -26,7 +26,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
         user = await ethers.provider.getSigner(constants.WBTC_HOLDER);
         deployer = await ethers.provider.getSigner(constants.FUSE_DEPLOYER);
 
-        [rariTankFactory, rariDataProvider, rariTankDelegator] = await contracts;
+        [rariTankFactory, rariDataProvider, rariTankDelegator, keeper] = await contracts;
         tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
         wbtc = await ethers.getContractAt(ERC20ABI, constants.WBTC);
         [rebalancer] = await ethers.getSigners();
@@ -34,7 +34,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
 
     describe("External interactions", async () => {
         it("Supplies funds to Fuse, mints fTokens", async () => {
-            await rariTankFactory.rebalance(tank.address);
+            await keeper.rebalance(tank.address);
             const cTokenContract = await tank.cToken();
             const cToken = await ethers.getContractAt(ERC20ABI, cTokenContract);
             chai.expect((await cToken.balanceOf(tank.address)).gt(0));
@@ -57,7 +57,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
                 });
             }
 
-            await rariTankFactory.rebalance(tank.address);
+            await keeper.rebalance(tank.address);
         })
     });
 

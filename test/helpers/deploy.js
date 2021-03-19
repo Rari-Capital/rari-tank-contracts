@@ -156,6 +156,7 @@ async function deploy() {
   const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
+  const Keeper = await ethers.getContractFactory("Keeper");
 
   const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
@@ -182,10 +183,22 @@ async function deploy() {
 
   await rariTankFactory.deployTank(wbtc, comptroller, tankDelegate.address);
   console.log("deployed");
-  const tank = await rariTankFactory.getTankByImplementation(wbtc, tankDelegate.address)
+  const tank = await rariTankFactory.getTankByImplementation(wbtc, tankDelegate.address);
   console.log(tank, "TANK ADDRESS");
 
-  return [rariTankFactory, rariDataProvider, tank];
+  console.log("keeper");
+  const keeper = await Keeper.deploy(rariTankFactory.address);
+  console.log(keeper.address);
+  
+  await hre.network.provider.request({
+    method: "evm_increaseTime",
+    params: [3000000000],
+  });
+
+  await keeper.activate();
+  
+
+  return [rariTankFactory, rariDataProvider, tank, keeper];
 }
 
 module.exports = deploy();

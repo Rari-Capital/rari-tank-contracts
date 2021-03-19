@@ -20,8 +20,6 @@ import {RariPoolController} from "../lib/RariPoolController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "hardhat/console.sol";
-
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -114,7 +112,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
                     address(this), 
                     block.timestamp
                 );
-                
+
                 KPR.addCreditETH{value: amounts[1]}(factory);
                 amount -= amounts[0];
             }
@@ -134,9 +132,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
                 KPR.addCreditETH{value: amounts[1]}(factory);
             }
         }
-
-        console.log(amount);
-        console.log(IERC20(token).balanceOf(address(this)));
 
         uint256 mantissa = 18 - decimals;
         uint256 exchangeRate = exchangeRateCurrent();
@@ -189,6 +184,14 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 exchangeRate = exchangeRateCurrent();
 
         return tankTokenBalance.mul(exchangeRate).div(10**mantissa);
+    }
+
+    /** @dev Get the tank's total underlying balance */
+    function totalUnderlyingBalance() public returns (uint256) {
+        uint256 mantissa = 36 - ERC20Upgradeable(token).decimals();
+        uint256 exchangeRate = exchangeRateCurrent();
+
+        return totalSupply().mul(exchangeRate).div(10**mantissa);
     }
 
     /********************
