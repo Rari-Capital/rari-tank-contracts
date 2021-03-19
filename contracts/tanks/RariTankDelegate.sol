@@ -20,7 +20,6 @@ import {RariPoolController} from "../lib/RariPoolController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -206,7 +205,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
         uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(comptroller, token, balanceOfUnderlying);
-        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD);
+        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD).div(2);
 
         if(idealBorrowBalance > borrowBalance) borrow(idealBorrowBalance - borrowBalance);
         if(borrowBalance > idealBorrowBalance) repay(borrowBalance - idealBorrowBalance);
@@ -216,7 +215,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Register profits and repay interest */
     function registerProfit() private {
-        uint256 currentStablePoolBalance = RariPoolController.balanceOf().div(1e12);
+        uint256 currentStablePoolBalance = RariPoolController.balanceOf();
         uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
 
         uint256 profit = currentStablePoolBalance > stablePoolBalance ? 
@@ -226,6 +225,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 debt = currentBorrowBalance > borrowBalance ? 
             currentBorrowBalance.sub(borrowBalance) : 
             0;
+
 
         if(profit == 0) return;
 

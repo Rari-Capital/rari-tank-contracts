@@ -40,7 +40,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
             chai.expect((await cToken.balanceOf(tank.address)).gt(0));
         });
 
-        it("Borrows USDC, deposits into stable pool, mints RSPT", async () => {
+        it("Borrows DAI, deposits into stable pool, mints RDPT", async () => {
             const rspt = await ethers.getContractAt(ERC20ABI, constants.RSPT);
             chai.expect((await rspt.balanceOf(tank.address)).gt(0));
         });
@@ -49,14 +49,12 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
             const usdc = await ethers.getContractAt(ERC20ABI, constants.USDC);
             const usdc_holder = await ethers.provider.getSigner(constants.USDC_HOLDER);
 
-            usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "100000000000000");
+            usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "10000000000000000000000000");
 
-            for (i = 0; i < 3000; i++) {
-                await hre.network.provider.request({
-                  method: "evm_mine",
-                });
-            }
-
+            await hre.network.provider.request({
+                method: "evm_mine",
+            });
+            
             await keeper.rebalance(tank.address);
         })
     });

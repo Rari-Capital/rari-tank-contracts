@@ -150,7 +150,6 @@ contract RariDataProvider is IRariDataProvider {
             IComptroller(comptrollerContract).oracle()
         );
         ICErc20 cErc20 = getCErc20Contract(comptrollerContract, underlying);
-
         return priceFeed
             .getUnderlyingPrice(cErc20);
     }

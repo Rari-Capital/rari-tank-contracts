@@ -8,4 +8,6 @@ interface IRariFundManager {
     function deposit(string calldata, uint256) external;
 
     function withdraw(string calldata, uint256) external;
+
+    function rariFundController() external returns (address);
 }

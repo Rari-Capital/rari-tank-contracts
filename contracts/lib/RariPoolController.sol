@@ -15,7 +15,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 */
 library RariPoolController {
     /* CONSTANTS */
-    address constant RARI_FUND_MANAGER = 0xC6BF8C8A55f77686720E0a88e2Fd1fEEF58ddf4a;
+    address constant RARI_FUND_MANAGER = 0xB465BAF04C087Ce3ed1C266F96CA43f4847D9635;
 
     /**
         @dev Deposit into the Rari Stable Pool

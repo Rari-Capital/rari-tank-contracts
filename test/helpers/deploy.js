@@ -9,7 +9,7 @@ const fuse = new Fuse(web3.currentProvider);
 
 const addresses = require("./constants");
 const selectedAccount = addresses.FUSE_DEPLOYER;
-const [usdc, wbtc] = [addresses.USDC, addresses.WBTC, addresses.USDC_HOLDER];
+const [usdc, wbtc] = [addresses.USDC, addresses.WBTC];
 const [usdcHolder, wbtcHolder] = [addresses.USDC_HOLDER, addresses.WBTC_HOLDER];
 
 const Keep3rABI = require("../abi/Keep3r.json")
@@ -139,10 +139,11 @@ async function deployFusePool() {
     true
   );
 
+  console.log("DAI", contracts.USDC);
   console.log(fUSDC, "fUSDC ADDRESS");
   console.log(fWBTC, "fWBTC ADDRESS");
 
-  deposit(fUSDC, usdc, web3.utils.toBN(1e12), usdcHolder);
+  deposit(fUSDC, usdc, web3.utils.toBN("1000000000000000000000000"), usdcHolder);
   deposit(fWBTC, wbtc, web3.utils.toBN(1e8), wbtcHolder);
 
   return [fusePool];
