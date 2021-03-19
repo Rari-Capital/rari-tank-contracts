@@ -25,6 +25,6 @@ contract Keeper {
 
     /** @dev Rebalance the tank */
     function rebalance(address tank) external {
-        IRariTank(tank).rebalance();
+        factory.rebalance(tank);
     }
 }

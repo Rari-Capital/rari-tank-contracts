@@ -49,9 +49,9 @@ contract RariTankFactory is IRariTankFactory, Ownable {
      * Modifiers *
     **************/
     modifier keep() {
-        require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
+        //require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
         _;
-        KPR.worked(msg.sender);
+        //KPR.worked(msg.sender);
     }
 
     /***************
@@ -115,8 +115,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
         return tanksByImplementation[erc20Contract][implementation];
     }
 
-    function rebalance(address tank) external {
-        require(msg.sender == rebalancer, "RariTankFactory: Must be called by the rebalancer");
+    function rebalance(address tank) external override keep {
         IRariTank(tank).rebalance();
     }
 }

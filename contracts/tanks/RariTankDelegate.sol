@@ -20,6 +20,7 @@ import {RariPoolController} from "../lib/RariPoolController.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -37,7 +38,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
      * Modifiers *
     **************/
     modifier onlyFactory() {
-        require(msg.sender != address(0), "RariFundTank: Function can only be called by the rebalancer");
+        require(msg.sender == factory, "RariFundTank: Function can only be called by the factory");
         _;
     }
 
@@ -245,17 +246,15 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function _withdraw(uint256 amount) private {
         // Return if the amount being withdrew is less than or equal the amount of dormant funds
         if (amount <= dormant) return; 
+        
         // Calculate the amount that must be returned
-        uint256 maxBorrow = 
-            IRariDataProvider(dataProvider).maxBorrowAmountUSD(comptroller, token, amount);
+        uint256 totalSupplied = FusePoolController.balanceOfUnderlying(cToken);
+        uint256 represents = amount.mul(1e18).div(totalSupplied);
 
-        uint256 due = IRariDataProvider(dataProvider)
-            .convertUSDToUnderlying(comptroller, BORROWING, maxBorrow)
-            .div(2);
+        uint256 totalBorrowed = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
+        uint256 due = totalBorrowed.mul(represents).div(1e18);
 
-        // Withdraw and repay
-        RariPoolController.withdraw(BORROWING_SYMBOL, due);
-        FusePoolController.repay(comptroller, BORROWING, due);
+        repay(due);
 
         // Withdraw funds from Fuse
         FusePoolController.withdraw(comptroller, token, amount);
