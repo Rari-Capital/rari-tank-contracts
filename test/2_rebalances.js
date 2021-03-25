@@ -23,12 +23,12 @@ let user, deployer, rebalancer;
 describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function() {
     this.timeout(300000)
     before(async () => {
-        user = await ethers.provider.getSigner(constants.WBTC_HOLDER);
+        user = await ethers.provider.getSigner(constants.HOLDER);
         deployer = await ethers.provider.getSigner(constants.FUSE_DEPLOYER);
 
         [rariTankFactory, rariDataProvider, rariTankDelegator, keeper] = await contracts;
         tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
-        wbtc = await ethers.getContractAt(ERC20ABI, constants.WBTC);
+        wbtc = await ethers.getContractAt(ERC20ABI, constants.TOKEN);
         [rebalancer] = await ethers.getSigners();
     });
 
@@ -46,10 +46,10 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
         });
 
         it("Earning yield increases exchangeRate", async () => {
-            const usdc = await ethers.getContractAt(ERC20ABI, constants.USDC);
-            const usdc_holder = await ethers.provider.getSigner(constants.USDC_HOLDER);
+            const dai = await ethers.getContractAt(ERC20ABI, constants.DAI);
+            const dai_holder = await ethers.provider.getSigner(constants.DAI_HOLDER);
             
-            usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "10000000000000000000000000");
+            dai.connect(dai_holder).transfer(constants.RARI_FUND_CONTROLLER, "1000000000000000000000000");
 
             await hre.network.provider.request({
                 method: "evm_mine",
@@ -61,11 +61,12 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
 
     describe("Withdrawals", async () => {
         it("Able to withdraw more than initial deposit", async () => {
-            await tank.connect(user).withdraw("100000500");
+            console.log((await tank.callStatic.underlyingBalanceOf(constants.HOLDER)).toString());
+            await tank.connect(user).withdraw(constants.WITHDRAWAL_AMOUNT);
         });
 
         it("Reverts if withdrawal amount is too large", async () => {
-            await tank.connect(user).withdraw("2000000000").should.be.rejectedWith("revert RariTankDelegate");
+            await tank.connect(user).withdraw(constants.LARGE_WITHDRAWAL_AMOUNT).should.be.rejectedWith("revert RariTankDelegate");
         });
     });
 });

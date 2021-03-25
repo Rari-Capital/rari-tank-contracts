@@ -9,11 +9,10 @@ const fuse = new Fuse(web3.currentProvider);
 
 const addresses = require("./constants");
 const selectedAccount = addresses.FUSE_DEPLOYER;
-const [usdc, wbtc] = [addresses.USDC, addresses.WBTC];
-const [usdcHolder, wbtcHolder] = [addresses.USDC_HOLDER, addresses.WBTC_HOLDER];
+const [dai, token] = [addresses.DAI, addresses.TOKEN];
+const [daiHolder, tokenHolder] = [addresses.DAI_HOLDER, addresses.HOLDER];
 
 const Keep3rABI = require("../abi/Keep3r.json")
-
 
 async function deployFuse() {
   const preferredPriceOracle = await fuse.deployPriceOracle(
@@ -21,7 +20,6 @@ async function deployFuse() {
     { isPublic: true },
     { from: selectedAccount }
   );
-  console.log(preferredPriceOracle, "PREFERRED PRICE ORACLE ADDRESS");
 
   let comptroller = new web3.eth.Contract(
     JSON.parse(
@@ -35,7 +33,6 @@ async function deployFuse() {
         fuse.compoundContracts["contracts/Comptroller.sol:Comptroller"].bin,
     })
     .send({ from: selectedAccount });
-  console.log(comptroller.options.address, "COMPTROLLER ADDRESS");
 
   var cErc20 = new web3.eth.Contract(
     JSON.parse(
@@ -50,7 +47,6 @@ async function deployFuse() {
           .bin,
     })
     .send({ from: selectedAccount });
-  console.log(cErc20.options.address, "CERC20 ADDRESS");
 
   var cToken = new web3.eth.Contract(
     JSON.parse(
@@ -65,7 +61,6 @@ async function deployFuse() {
           .bin,
     })
     .send({ from: selectedAccount });
-  console.log(cToken.options.address, "CETH ADDRESS");
 }
 
 async function deposit(cToken, underlying, amount, depositor) {
@@ -85,9 +80,6 @@ async function deposit(cToken, underlying, amount, depositor) {
 
   await underlyingToken.methods.approve(cToken, amount.mul(web3.utils.toBN(2))).send({from: depositor});
   await cTokenContract.methods.mint(amount).send({from: depositor});
-
-  console.log(await underlyingToken.methods.balanceOf(cToken).call(), "CTOKEN BALANCE");
-  console.log(await cTokenContract.methods.totalSupply().call(), "CTOKEN TOTAL SUPPLY");
 }
 
 async function deployFusePool() {
@@ -101,16 +93,15 @@ async function deployFusePool() {
     {isPrivate: false},
     { from: selectedAccount }
   );
-  console.log(fusePool, "FUSEPOOL ADDRESS");
 
-  const [fUSDC] = await fuse.deployAsset(
+  const [fDAI] = await fuse.deployAsset(
     {
-      underlying: usdc,
+      underlying: dai,
       decimals: 8,
       comptroller: fusePool,
       initialExchangeRateMantissa: web3.utils.toBN(1e18),
-      name: "Tanks USDC",
-      symbol: "f-1-USDC",
+      name: "Tanks DAI",
+      symbol: "f-1-DAI",
       interestRateModel: "JumpRateModel",
       admin: selectedAccount,
     },
@@ -121,13 +112,13 @@ async function deployFusePool() {
     true
   );
 
-  const [fWBTC] = await fuse.deployAsset(
+  const [fToken] = await fuse.deployAsset(
     {
-      underlying: wbtc,
+      underlying: token,
       decimals: 8,
       comptroller: fusePool,
       initialExchangeRateMantissa: web3.utils.toBN(1e18),
-      name: "Tanks WBTC",
+      name: `Tanks ${addresses.TOKEN_SYMBOL}`,
       symbol: "f-1-WBTC",
       interestRateModel: "JumpRateModel",
       admin: selectedAccount,
@@ -139,17 +130,16 @@ async function deployFusePool() {
     true
   );
 
-  console.log("DAI", contracts.USDC);
-  console.log(fUSDC, "fUSDC ADDRESS");
-  console.log(fWBTC, "fWBTC ADDRESS");
-
-  deposit(fUSDC, usdc, web3.utils.toBN("1000000000000000000000000"), usdcHolder);
-  deposit(fWBTC, wbtc, web3.utils.toBN(1e8), wbtcHolder);
+  deposit(fDAI, dai, web3.utils.toBN("1000000000000000000000000"), daiHolder);
 
   return [fusePool];
 }
 
 async function deploy() {
+  await hre.network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [tokenHolder],
+  });
   await deployFuse();
   const [comptroller] = await deployFusePool();
   const [rebalancer] = await web3.eth.getAccounts();
@@ -161,11 +151,9 @@ async function deploy() {
 
   const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
-  console.log(tankDelegate.address, "TANK_DELEGATE ADDRESS");
 
   const rariDataProvider = await RariDataProvider.deploy();
   await rariDataProvider.deployed();
-  console.log(rariDataProvider.address, "DATA PROVIDER ADDRESS");
 
   const rariTankFactory = await RariTankFactory.deploy(
     rariDataProvider.address,
@@ -174,7 +162,6 @@ async function deploy() {
   );
 
   await rariTankFactory.deployed();
-  console.log(rariTankFactory.address, "FACTORY ADDRESS");
 
   // Add the tank factory as a Keep3r job
   const governance = await ethers.provider.getSigner(addresses.KEEP3R_GOVERNANCE);
@@ -182,14 +169,10 @@ async function deploy() {
 
   keep3r.connect(governance).addJob(rariTankFactory.address);
 
-  await rariTankFactory.deployTank(wbtc, comptroller, tankDelegate.address);
-  console.log("deployed");
-  const tank = await rariTankFactory.getTankByImplementation(wbtc, tankDelegate.address);
-  console.log(tank, "TANK ADDRESS");
+  await rariTankFactory.deployTank(token, comptroller, tankDelegate.address);
+  const tank = await rariTankFactory.getTankByImplementation(token, tankDelegate.address);
 
-  console.log("keeper");
   const keeper = await Keeper.deploy(rariTankFactory.address);
-  console.log(keeper.address);
   
   await hre.network.provider.request({
     method: "evm_increaseTime",
@@ -198,6 +181,7 @@ async function deploy() {
 
   await keeper.activate();
   
+  console.log(`USING ${addresses.TOKEN_SYMBOL}`);
 
   return [rariTankFactory, rariDataProvider, tank, keeper];
 }

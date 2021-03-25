@@ -1,12 +1,46 @@
+tokens = [
+    {
+        symbol: "WBTC",
+        address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        holder: "0x0C4809bE72F9E117D75381438c5dAeC8AbE75BaD",
+        depositAmount: "100000000",
+        withdrawalAmount: "100000500",
+        largeWithdrawalAmount: "200000500"
+    },
+    {
+        symbol: "USDC",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        holder: "0x55FE002aefF02F77364de339a1292923A15844B8",
+        depositAmount: "50000000000",
+        withdrawalAmount: "50500000000",
+        largeWithdrawalAmount: "100000000000"
+    },
+    {
+        symbol: "UNI",
+        address: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+        holder: "0xD5Ba96148DF85DFea6E35C515D3aCEf08db6C996",
+        depositAmount: "1750000000000000000000",
+        withdrawalAmount: "1775000000000000000000",
+        largeWithdrawalAmount: "3550000000000000000000"
+    },
+];
+
+const token = tokens[Math.floor(Math.random() * tokens.length)];
+
 module.exports = {
-    WBTC: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-    USDC: "0x6b175474e89094c44da98b954eedeac495271d0f",
+    TOKEN: token.address,
+    TOKEN_SYMBOL: token.symbol,
+    HOLDER: token.holder,
+    AMOUNT: token.depositAmount,
+    WITHDRAWAL_AMOUNT: token.withdrawalAmount,
+    LARGE_WITHDRAWAL_AMOUNT: token.largeWithdrawalAmount,
+
+    DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
+    DAI_HOLDER: "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c",
     
     RSPT: "0x0833cfcb11A5ba89FbAF73a407831c98aD2D7648",
     RARI_FUND_CONTROLLER: "0xd7590e93a2e04110ad50ec70eade7490f7b8228a",
 
-    USDC_HOLDER: "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c",
-    WBTC_HOLDER: "0x0C4809bE72F9E117D75381438c5dAeC8AbE75BaD",
 
     CHAINLINK_ORACLE: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
 
