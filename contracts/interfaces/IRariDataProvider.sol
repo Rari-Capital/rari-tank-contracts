@@ -13,8 +13,6 @@ interface IRariDataProvider {
     function borrowBalanceCurrent(address, address) external returns (uint256);
     function maxBorrowAmountUSD(address, address, uint256) external returns (uint256);
 
-    function convertUnderlyingToCErc20(address, address, uint256) external returns (uint256);
-    function convertCErc20ToUnderlying(address, address, uint256) external returns (uint256);
     function convertUSDToUnderlying(address, address, uint256) external returns (uint256);
 
     function getUnderlyingInEth(address, address) external returns (uint256);

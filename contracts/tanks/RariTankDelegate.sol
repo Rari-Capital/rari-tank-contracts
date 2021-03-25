@@ -155,6 +155,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
     function rebalance() external override onlyFactory {
+        require(canRebalance(), "Rebalance unecessary");
         if(dormant > 0) depositDormantFunds();
         registerProfit();
     }
@@ -194,12 +195,48 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         return totalSupply().mul(exchangeRate).div(10**mantissa);
     }
 
+    /** @return A bool that indicates whether the tank can be rebalanced */
+    function canRebalance() public returns (bool) {
+        IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
+
+        uint256 totalBalance = totalUnderlyingBalance();
+        bool dormantGreater = dormant >= totalBalance.div(20);
+
+        uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(
+            comptroller, 
+            token, 
+            FusePoolController.balanceOfUnderlying(cToken)
+        );
+
+        uint256 borrowAmountUnderlying = rariDataProvider.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD);
+        uint256 borrowBalanceCurrent = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
+
+        uint256 divergence = 
+            borrowBalanceCurrent > borrowBalance ? borrowBalanceCurrent - borrowBalance :  
+            borrowBalance > borrowBalanceCurrent ? borrowBalance - borrowBalanceCurrent : 
+            0;
+
+        bool gainedGreater;
+        uint256 currentPoolBalance = RariPoolController.balanceOf();
+        if (currentPoolBalance > borrowBalance) {
+            uint256 threshold = borrowBalance.div(20);
+            gainedGreater = 
+                (currentPoolBalance - borrowBalance) >= threshold;
+        }
+
+        return (
+            dormantGreater ||
+            divergence >= borrowAmountUnderlying.div(5) ||
+            gainedGreater
+        );
+    }
+
     /********************
-    * Private Functions *
+    * Internal Functions *
     *********************/
 
     /** @dev Deposit dormant funds into a FusePool, borrow a stable asset and put it into the stable pool */
-    function depositDormantFunds() private {
+    function depositDormantFunds() internal {
         IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
         FusePoolController.deposit(comptroller, cToken, dormant);
 
@@ -214,7 +251,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /** @dev Register profits and repay interest */
-    function registerProfit() private {
+    function registerProfit() internal {
         uint256 currentStablePoolBalance = RariPoolController.balanceOf();
         uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
 
@@ -222,9 +259,11 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             currentStablePoolBalance.sub(stablePoolBalance) : 
             0;
 
+
         uint256 debt = currentBorrowBalance > borrowBalance ? 
             currentBorrowBalance.sub(borrowBalance) : 
             0;
+
 
 
         if(profit == 0) return;
@@ -236,6 +275,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             return;
         }
 
+
         FusePoolController.repay(comptroller, BORROWING, debt);
         
         uint256 underlyingProfit = swapInterestForUnderlying(profit - debt);
@@ -243,9 +283,12 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /** @dev Withdraw funds from protocols */
-    function _withdraw(uint256 amount) private {
+    function _withdraw(uint256 amount) internal {
         // Return if the amount being withdrew is less than or equal the amount of dormant funds
-        if (amount <= dormant) return; 
+        if (amount <= dormant) {
+            dormant -= amount;
+            return;
+        }
         
         // Calculate the amount that must be returned
         uint256 totalSupplied = FusePoolController.balanceOfUnderlying(cToken);
@@ -261,7 +304,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
-    function borrow(uint256 amount) private {
+    function borrow(uint256 amount) internal {
         FusePoolController.borrow(comptroller, BORROWING, amount);
         borrowBalance += amount;
 
@@ -270,7 +313,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /** @dev Withdraw a stable asset from Rari and repay */
-    function repay(uint256 amount) private {
+    function repay(uint256 amount) internal {
         RariPoolController.withdraw(BORROWING_SYMBOL, amount);
         stablePoolBalance -= amount;
 
@@ -282,7 +325,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         @dev Facilitate a swap from the borrowed token to the underlying token 
         @return The amount of tokens returned by Uniswap
     */
-    function swapInterestForUnderlying(uint256 amount) private returns (uint256) {
+    function swapInterestForUnderlying(uint256 amount) internal returns (uint256) {
         address[] memory path = new address[](2);
         path[0] = BORROWING;
         path[1] = token;

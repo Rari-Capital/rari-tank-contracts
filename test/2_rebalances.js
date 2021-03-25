@@ -48,7 +48,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
         it("Earning yield increases exchangeRate", async () => {
             const usdc = await ethers.getContractAt(ERC20ABI, constants.USDC);
             const usdc_holder = await ethers.provider.getSigner(constants.USDC_HOLDER);
-
+            
             usdc.connect(usdc_holder).transfer(constants.RARI_FUND_CONTROLLER, "10000000000000000000000000");
 
             await hre.network.provider.request({

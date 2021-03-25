@@ -38,40 +38,6 @@ contract RariDataProvider is IRariDataProvider {
             .borrowBalanceCurrent(msg.sender);
     }
 
-    /** 
-        @dev Given a certain amount of underlying tokens, use the exchange rate to calculate the equivalent amount in CErc20 tokens
-    */
-    function convertUnderlyingToCErc20(
-        address comptroller,
-        address underlying, 
-        uint256 amount
-    )
-        external 
-        override 
-        returns (uint256) 
-    {
-        uint256 exchangeRate = getCErc20Contract(comptroller, underlying)
-            .exchangeRateCurrent();
-        return amount.mul(1e18).div(exchangeRate);
-    }
-
-    /** 
-        @dev Given a certain amount of cErc20 tokens, use the exchange rate to calculate the equivalent amount in underlying tokens
-    */
-    function convertCErc20ToUnderlying(
-        address comptroller, 
-        address underlying, 
-        uint256 amount
-    ) 
-        external 
-        override 
-        returns (uint256) 
-    {
-        uint256 exchangeRate = getCErc20Contract(comptroller, underlying)
-            .exchangeRateCurrent();
-        return amount.mul(exchangeRate).div(1e18);
-    }
-
 
     /**
         @param amount The amount of underlying tokens
@@ -134,7 +100,7 @@ contract RariDataProvider is IRariDataProvider {
         returns (uint256) 
     {
         uint256 price = _getUnderlyingPrice(comptroller, underlying);
-        return amount.mul(1e18).div(price);
+        return amount.mul(1e18).div(price);        
     }
 
     /********************
