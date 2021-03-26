@@ -57,7 +57,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         __ERC20_init(
             string(abi.encodePacked("Tank ", ERC20Upgradeable(_token).name())),
-            string(abi.encodePacked("rtt-", ERC20Upgradeable(_token).symbol(), "-USDC"))
+            string(abi.encodePacked("rtt-", ERC20Upgradeable(_token).symbol(), "-DAI"))
         );
 
         token = _token;
@@ -133,11 +133,10 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             }
         }
 
-        uint256 mantissa = 18 - decimals;
         uint256 exchangeRate = exchangeRateCurrent();
         dormant += amount; // Increase the tank's total dormant balance
 
-        _mint(msg.sender, amount.mul(exchangeRate).div(10**mantissa)); // Mints RTT
+        _mint(msg.sender, amount.mul(exchangeRate).div(10**decimals)); // Mints RTT
     }
 
     /** @dev Withdraw from the Tank */
@@ -270,7 +269,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         RariPoolController.withdraw(BORROWING_SYMBOL, profit);
 
-        if(debt > profit) {
+        if(debt >= profit) {
             FusePoolController.repay(comptroller, BORROWING, profit);
             return;
         }
