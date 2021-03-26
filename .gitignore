@@ -5,3 +5,4 @@ cache
 coverage
 tests
 deployments
+.env

@@ -1,10 +1,9 @@
-require("@nomiclabs/hardhat-ganache");
 require("@tenderly/hardhat-tenderly");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
-require("solidity-coverage");
+require("hardhat-gas-reporter");
 
-const removeConsoleLog = require("hardhat-preprocessor");
+require("dotenv").config()
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -13,7 +12,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://eth-mainnet.alchemyapi.io/v2/UPMBuJ4TAQrsy9sdb4QSKuanqG1EYR3L",
+        url: process.env.ALCHEMY,
         blockNumber: 11911184,
       },
       gas: 8000000,
@@ -39,5 +38,11 @@ module.exports = {
   tenderly: {
     username: "JetDeveloping",
     project: "tanks"
+  },
+  gasReporter: {
+    currency: "USD",
+    gasPrice: 127,
+    enabled: true,
+    coinmarketcap: process.env.COIN_MARKET_CAP
   }
 };
