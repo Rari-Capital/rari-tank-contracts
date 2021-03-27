@@ -34,7 +34,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
 
     describe("External interactions", async () => {
         it("Supplies funds to Fuse, mints fTokens", async () => {
-            await keeper.rebalance(tank.address);
+            await rariTankFactory.connect(keeper).rebalance(tank.address);
             const cTokenContract = await tank.cToken();
             const cToken = await ethers.getContractAt(ERC20ABI, cTokenContract);
             chai.expect((await cToken.balanceOf(tank.address)).gt(0));
@@ -55,7 +55,7 @@ describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function
                 method: "evm_mine",
             });
             
-            await keeper.rebalance(tank.address);
+            await rariTankFactory.connect(keeper).rebalance(tank.address);
         })
     });
 

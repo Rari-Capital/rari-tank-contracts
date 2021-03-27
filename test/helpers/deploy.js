@@ -12,7 +12,8 @@ const selectedAccount = addresses.FUSE_DEPLOYER;
 const [dai, token] = [addresses.DAI, addresses.TOKEN];
 const [daiHolder, tokenHolder] = [addresses.DAI_HOLDER, addresses.HOLDER];
 
-const Keep3rABI = require("../abi/Keep3r.json")
+const Keep3rABI = require("../abi/Keep3r.json");
+const Keep3rOracleABI = require("../abi/Oracle.json")
 
 async function deployFuse() {
   const preferredPriceOracle = await fuse.deployPriceOracle(
@@ -172,18 +173,34 @@ async function deploy() {
   await rariTankFactory.deployTank(token, comptroller, tankDelegate.address);
   const tank = await rariTankFactory.getTankByImplementation(token, tankDelegate.address);
 
-  const keeper = await Keeper.deploy(rariTankFactory.address);
+  //const keeper = await Keeper.deploy(rariTankFactory.address);
   
+  // await hre.network.provider.request({
+  //   method: "evm_increaseTime",
+  //   params: [3000000000],
+  // }); 
+
+  // await keeper.activate();
+
+  const oracle = await ethers.getContractAt(
+    Keep3rOracleABI,
+    addresses.KEEP3R_ORACLE
+  );
+
   await hre.network.provider.request({
-    method: "evm_increaseTime",
-    params: [3000000000],
+    method: "hardhat_impersonateAccount",
+    params: [addresses.ORACLE_BOT],
   });
 
-  await keeper.activate();
+  const bot = await ethers.provider.getSigner(addresses.ORACLE_BOT);
+  oracle.connect(bot).update(
+    "0x1ceb5cb57c4d4e2b2433641b95dd330a33185a44",
+    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+  );
   
   console.log(`USING ${addresses.TOKEN_SYMBOL}`);
 
-  return [rariTankFactory, rariDataProvider, tank, keeper];
+  return [rariTankFactory, rariDataProvider, tank, bot];
 }
 
 module.exports = deploy();

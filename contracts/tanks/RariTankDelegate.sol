@@ -166,7 +166,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @return The exchange rate between the RTT and the underlying token */
     function exchangeRateCurrent() 
         public 
-        override  
+        override 
         returns (uint256) 
     {
         uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();

@@ -49,9 +49,10 @@ contract RariTankFactory is IRariTankFactory, Ownable {
      * Modifiers *
     **************/
     modifier keep() {
-        //require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
+        uint256 left = gasleft();
+        require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
         _;
-        //KPR.worked(msg.sender);
+        KPR.receiptETH(msg.sender, left - gasleft());
     }
 
     /***************
