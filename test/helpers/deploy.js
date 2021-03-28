@@ -145,7 +145,6 @@ async function deploy() {
   const [comptroller] = await deployFusePool();
   const [rebalancer] = await web3.eth.getAccounts();
 
-  const RariDataProvider = await ethers.getContractFactory("RariDataProvider");
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
   const Keeper = await ethers.getContractFactory("Keeper");
@@ -153,11 +152,7 @@ async function deploy() {
   const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
 
-  const rariDataProvider = await RariDataProvider.deploy();
-  await rariDataProvider.deployed();
-
   const rariTankFactory = await RariTankFactory.deploy(
-    rariDataProvider.address,
     Fuse.FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS,
     rebalancer,
   );
@@ -200,7 +195,7 @@ async function deploy() {
   
   console.log(`USING ${addresses.TOKEN_SYMBOL}`);
 
-  return [rariTankFactory, rariDataProvider, tank, bot];
+  return [rariTankFactory, tank, bot];
 }
 
 module.exports = deploy();

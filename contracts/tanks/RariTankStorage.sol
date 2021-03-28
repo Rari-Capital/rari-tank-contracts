@@ -26,9 +26,6 @@ abstract contract RariTankStorage {
     /** @dev The address of the RariTankFactory */
     address internal factory;
 
-    /** @dev The address of the RariDataProvider */
-    address internal dataProvider;
-
     /** @dev The address of the FusePool Comptroller */
     address internal comptroller;
 

@@ -58,8 +58,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     /***************
      * Constructor *
     ***************/
-    constructor(address _dataProvider, address _fusePoolDirectory, address _rebalancer) {
-        dataProvider = _dataProvider;
+    constructor(address _fusePoolDirectory, address _rebalancer) {
         fusePoolDirectory = _fusePoolDirectory;
         rebalancer = _rebalancer;
     }
@@ -84,9 +83,7 @@ contract RariTankFactory is IRariTankFactory, Ownable {
 
         RariTankDelegator tank = new RariTankDelegator(
             erc20Contract, 
-            comptroller, 
-            address(this),
-            dataProvider,
+            comptroller,
             implementation
         );
 

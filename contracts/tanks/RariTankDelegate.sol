@@ -46,8 +46,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function initialize(
         address _token,
         address _comptroller,
-        address _factory,
-        address _dataProvider
+        address _factory
     )
         external
     {
@@ -62,7 +61,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         token = _token;
         comptroller = _comptroller;
         factory = _factory;
-        dataProvider = _dataProvider;
 
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
         require(cToken != address(0), "Unsupported asset");

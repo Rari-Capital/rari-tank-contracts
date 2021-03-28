@@ -16,17 +16,17 @@ const constants = require("./helpers/constants");
 
 const RariTankDelegatorABI = require("./abi/RariFundTank.json");
 const ERC20ABI = require("./abi/ERC20.json");
-let rariTankFactory, rariDataProvider, tank, wbtc, keeper;
+let rariTankFactory, tank, wbtc, keeper;
 let user, deployer, rebalancer;
 
 
-describe("RariDataProvider, RariTankDelegate, RariTankDelegator", async function() {
+describe("RariTankDelegate, RariTankDelegator", async function() {
     this.timeout(300000)
     before(async () => {
         user = await ethers.provider.getSigner(constants.HOLDER);
         deployer = await ethers.provider.getSigner(constants.FUSE_DEPLOYER);
 
-        [rariTankFactory, rariDataProvider, rariTankDelegator, keeper] = await contracts;
+        [rariTankFactory, rariTankDelegator, keeper] = await contracts;
         tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
         wbtc = await ethers.getContractAt(ERC20ABI, constants.TOKEN);
         [rebalancer] = await ethers.getSigners();
