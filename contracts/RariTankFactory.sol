@@ -30,17 +30,14 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     * Variables *
     *************/
 
-    /** @dev The address of the RariDataProvider */
-    address private dataProvider;
-
     /** @dev The address of the FusePoolDirectory */
     address private fusePoolDirectory;
 
-    /** @dev The address of the rebalancer */
-    address private rebalancer;
-
     /** @dev Maps the underlying token to a map from implementation to tank  */
-    mapping(address => mapping(address => address)) private tanksByImplementation;
+    mapping(address => mapping(address => address)) private tankByImplementation;
+
+    /** @dev Maps the address of an implementation to an array of tanks that use it */
+    mapping(address => address[]) private tanksByImplementation;
 
     /** @dev Maps the underlying token to an array of tanks supporting it */
     mapping(address => address[]) private tanksByUnderlying;
@@ -58,9 +55,8 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     /***************
      * Constructor *
     ***************/
-    constructor(address _fusePoolDirectory, address _rebalancer) {
+    constructor(address _fusePoolDirectory) {
         fusePoolDirectory = _fusePoolDirectory;
-        rebalancer = _rebalancer;
     }
 
     /********************
@@ -68,6 +64,13 @@ contract RariTankFactory is IRariTankFactory, Ownable {
     ********************/
     function newFusePoolDirectory(address _fusePoolDirectory) external {
         fusePoolDirectory = _fusePoolDirectory;
+    }
+
+    /**
+    @dev Rebalance the tank
+    */
+    function rebalance(address tank) external override keep {
+        IRariTank(tank).rebalance();
     }
 
     /** 
@@ -87,10 +90,13 @@ contract RariTankFactory is IRariTankFactory, Ownable {
             implementation
         );
 
-        tanksByImplementation[erc20Contract][implementation] = address(tank);
-        tanksByUnderlying[erc20Contract].push(address(tank));
+        address tankAddr = address(tank);
 
-        return erc20Contract;
+        tankByImplementation[erc20Contract][implementation] = tankAddr;
+        tanksByImplementation[implementation].push(tankAddr);
+        tanksByUnderlying[erc20Contract].push(tankAddr);
+
+        return tankAddr;
     }
 
     /*****************
@@ -110,10 +116,6 @@ contract RariTankFactory is IRariTankFactory, Ownable {
         @return tank that supports the token and uses the implementation contract
     */
     function getTankByImplementation(address erc20Contract, address implementation) external view returns (address) {
-        return tanksByImplementation[erc20Contract][implementation];
-    }
-
-    function rebalance(address tank) external override keep {
-        IRariTank(tank).rebalance();
+        return tankByImplementation[erc20Contract][implementation];
     }
 }

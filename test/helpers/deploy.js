@@ -153,8 +153,7 @@ async function deploy() {
   await tankDelegate.deployed();
 
   const rariTankFactory = await RariTankFactory.deploy(
-    Fuse.FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS,
-    rebalancer,
+    Fuse.FUSE_POOL_DIRECTORY_CONTRACT_ADDRESS
   );
 
   await rariTankFactory.deployed();
