@@ -2,6 +2,7 @@ require("@tenderly/hardhat-tenderly");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-gas-reporter");
+require("solidity-coverage");
 
 require("dotenv").config()
 
@@ -13,7 +14,7 @@ module.exports = {
     hardhat: {
       forking: {
         url: process.env.ALCHEMY,
-        blockNumber: 11911184,
+        blockNumber: 12126175,
       },
       gas: 8000000,
       blockGasLimit: 8000000,

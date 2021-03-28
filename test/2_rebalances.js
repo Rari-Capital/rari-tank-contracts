@@ -16,7 +16,7 @@ const constants = require("./helpers/constants");
 
 const RariTankDelegatorABI = require("./abi/RariFundTank.json");
 const ERC20ABI = require("./abi/ERC20.json");
-let rariTankFactory, tank, wbtc, keeper;
+let rariTankFactory, tank, token, keeper;
 let user, deployer, rebalancer;
 
 
@@ -28,7 +28,7 @@ describe("RariTankDelegate, RariTankDelegator", async function() {
 
         [rariTankFactory, rariTankDelegator, keeper] = await contracts;
         tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
-        wbtc = await ethers.getContractAt(ERC20ABI, constants.TOKEN);
+        token = await ethers.getContractAt(ERC20ABI, constants.TOKEN);
         [rebalancer] = await ethers.getSigners();
     });
 
@@ -68,5 +68,19 @@ describe("RariTankDelegate, RariTankDelegator", async function() {
         it("Reverts if withdrawal amount is too large", async () => {
             await tank.connect(user).withdraw(constants.LARGE_WITHDRAWAL_AMOUNT).should.be.rejectedWith("revert RariTankDelegate");
         });
+
+        it("Dormant funds can be used for withdrawals", async () => {
+            //The constants.WITHDRAWAL_AMOUNT will be less than constants.AMOUNT (because of Keep3r Fee)
+            token.connect(user).approve(rariTankDelegator, constants.WITHDRAWAL_AMOUNT);
+            await tank.connect(user).deposit(constants.WITHDRAWAL_AMOUNT);
+            await tank.connect(user).withdraw(constants.AMOUNT).should.be.not.rejectedWith("revert");
+        });
+
+        it("Withdraws if amount is less than dormant", async () => {
+            // constants.amount is less than constants.withdrawal_amount
+            token.connect(user).approve(rariTankDelegator, constants.LARGE_WITHDRAWAL_AMOUNT);
+            await tank.connect(user).deposit(constants.LARGE_WITHDRAWAL_AMOUNT);
+            await tank.connect(user).withdraw(constants.AMOUNT).should.be.not.rejectedWith("revert");
+        })
     });
 });
