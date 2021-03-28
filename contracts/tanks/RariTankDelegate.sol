@@ -92,34 +92,34 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
-        if(paid <= 4e17) {
-            uint256 left = 4e17 - paid;
+        if(paid <= 3e17) {
+            uint256 left = 3e17 - paid;
 
             address[] memory path = new address[](2);
             path[0] = token;
             path[1] = ROUTER.WETH();
 
-            if(deposited.div(20) > left) {
-                IERC20(token).approve(address(ROUTER), amount.div(20));
+            if(deposited.div(40) > left) {
+                IERC20(token).approve(address(ROUTER), amount.div(40));
 
                 uint256[] memory amounts = ROUTER.swapTokensForExactETH(
                     left,
-                    amount.div(20),
+                    amount.div(40),
                     path, 
                     address(this), 
                     block.timestamp
                 );
 
-                KPR.addCreditETH{value: amounts[1]}(factory);
                 amount -= amounts[0];
+                KPR.addCreditETH{value: amounts[1]}(factory);
             }
 
             else {
-                IERC20(token).approve(address(ROUTER), amount.div(20));
+                IERC20(token).approve(address(ROUTER), amount.div(40));
 
                 uint256[] memory amounts = ROUTER.swapTokensForExactETH(
-                    left,
-                    amount.div(20),
+                    deposited.div(40),
+                    amount.div(40),
                     path, 
                     address(this), 
                     block.timestamp
@@ -153,6 +153,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         require(canRebalance(), "Rebalance unecessary");
         if(dormant() > 0) depositDormantFunds();
         registerProfit();
+        delete paid;
     }
 
     /*******************
@@ -280,6 +281,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         if (amount <= dormant()) {
             return;
         }
+
+        else if (dormant() > 0) amount -= dormant();
         
         // Calculate the amount that must be returned
         uint256 totalSupplied = FusePoolController.balanceOfUnderlying(cToken);
