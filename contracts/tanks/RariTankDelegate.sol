@@ -95,8 +95,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
-        if(paid <= 3e17) {
-            uint256 left = 3e17 - paid;
+        if(paid <= 4e17) {
+            uint256 left = 4e17 - paid;
 
             address[] memory path = new address[](2);
             path[0] = token;
@@ -134,7 +134,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         }
 
         uint256 exchangeRate = exchangeRateCurrent();
-        dormant += amount; // Increase the tank's total dormant balance
 
         _mint(msg.sender, amount.mul(exchangeRate).div(10**decimals)); // Mints RTT
     }
@@ -155,7 +154,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
     function rebalance() external override onlyFactory {
         require(canRebalance(), "Rebalance unecessary");
-        if(dormant > 0) depositDormantFunds();
+        if(dormant() > 0) depositDormantFunds();
         registerProfit();
     }
 
@@ -170,7 +169,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         returns (uint256) 
     {
         uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
-        uint256 balance = dormant.add(FusePoolController.balanceOfUnderlying(cToken)).mul(10**mantissa);
+        uint256 balance = dormant()
+            .add(FusePoolController.balanceOfUnderlying(cToken))
+            .mul(10**mantissa);
         uint256 totalSupply = totalSupply();
 
         if(balance == 0 || totalSupply == 0) return 1e18; // The initial exchange rate should be 1
@@ -199,7 +200,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
 
         uint256 totalBalance = totalUnderlyingBalance();
-        bool dormantGreater = dormant >= totalBalance.div(20);
+        bool dormantGreater = dormant() >= totalBalance.div(20);
 
         uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(
             comptroller, 
@@ -237,7 +238,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @dev Deposit dormant funds into a FusePool, borrow a stable asset and put it into the stable pool */
     function depositDormantFunds() internal {
         IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
-        FusePoolController.deposit(comptroller, cToken, dormant);
+        FusePoolController.deposit(comptroller, cToken, dormant());
 
         uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
         uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(comptroller, token, balanceOfUnderlying);
@@ -245,8 +246,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         if(idealBorrowBalance > borrowBalance) borrow(idealBorrowBalance - borrowBalance);
         if(borrowBalance > idealBorrowBalance) repay(borrowBalance - idealBorrowBalance);
-
-        dormant = 0;
     }
 
     /** @dev Register profits and repay interest */
@@ -284,8 +283,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @dev Withdraw funds from protocols */
     function _withdraw(uint256 amount) internal {
         // Return if the amount being withdrew is less than or equal the amount of dormant funds
-        if (amount <= dormant) {
-            dormant -= amount;
+        if (amount <= dormant()) {
             return;
         }
         
@@ -318,6 +316,13 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         FusePoolController.repay(comptroller, BORROWING, amount);
         borrowBalance -= amount;
+    }
+
+    /**
+        @return a count of the tank's undeposited funds
+    */
+    function dormant() internal view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
     }
 
     /** 

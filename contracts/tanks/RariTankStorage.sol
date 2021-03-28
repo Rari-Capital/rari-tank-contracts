@@ -32,9 +32,6 @@ abstract contract RariTankStorage {
     /** @dev The address of the FusePool Comptroller */
     address internal comptroller;
 
-    /** @dev A count of undeposited funds */
-    uint256 internal dormant;
-
     /** @dev The tank's borrow balance */
     uint256 internal borrowBalance;
 

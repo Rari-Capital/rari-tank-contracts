@@ -17,7 +17,7 @@ import {IKeep3r} from "./external/keep3r/IKeep3r.sol";
 /**
     @title RariTankFactory
     @author Jet Jadeja
-    @dev Deploys RariFundTank implementations
+    @dev Deploys RariTankDelegator implementations
 */
 contract RariTankFactory is IRariTankFactory, Ownable {
 
