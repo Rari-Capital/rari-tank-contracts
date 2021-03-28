@@ -15,14 +15,6 @@ tokens = [
         withdrawalAmount: "50500000000",
         largeWithdrawalAmount: "100000000000"
     },
-    // {
-    //     symbol: "UNI",
-    //     address: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
-    //     holder: "0xD5Ba96148DF85DFea6E35C515D3aCEf08db6C996",
-    //     depositAmount: "1750000000000000000000",
-    //     withdrawalAmount: "1775000000000000000000",
-    //     largeWithdrawalAmount: "3550000000000000000000"
-    // },
 ];
 
 const token = tokens[Math.floor(Math.random() * tokens.length)];

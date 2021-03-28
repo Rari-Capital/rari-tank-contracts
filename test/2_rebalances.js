@@ -61,7 +61,6 @@ describe("RariTankDelegate, RariTankDelegator", async function() {
 
     describe("Withdrawals", async () => {
         it("Able to withdraw more than initial deposit", async () => {
-            console.log((await tank.callStatic.underlyingBalanceOf(constants.HOLDER)).toString());
             await tank.connect(user).withdraw(constants.WITHDRAWAL_AMOUNT);
         });
 
