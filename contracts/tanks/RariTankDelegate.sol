@@ -4,7 +4,6 @@ pragma solidity 0.7.3;
 import {RariTankStorage} from "./RariTankStorage.sol";
 
 import {IRariTank} from "../interfaces/IRariTank.sol";
-import {IRariDataProvider} from "../interfaces/IRariDataProvider.sol";
 
 import {IComptroller} from "../external/compound/IComptroller.sol";
 import {ICErc20} from "../external/compound/ICErc20.sol";
@@ -78,7 +77,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 decimals = ERC20Upgradeable(token).decimals();
         uint256 priceMantissa = 36 - decimals;
 
-        uint256 price = IRariDataProvider(dataProvider).getUnderlyingInEth(
+        uint256 price = FusePoolController.getUnderlyingInEth(
             comptroller,
             token
         );
@@ -197,18 +196,16 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @return A bool that indicates whether the tank can be rebalanced */
     function canRebalance() public returns (bool) {
-        IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
-
         uint256 totalBalance = totalUnderlyingBalance();
         bool dormantGreater = dormant() >= totalBalance.div(20);
 
-        uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(
+        uint256 borrowAmountUSD = FusePoolController.maxBorrowAmountUSD(
             comptroller, 
             token, 
             FusePoolController.balanceOfUnderlying(cToken)
         );
 
-        uint256 borrowAmountUnderlying = rariDataProvider.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD);
+        uint256 borrowAmountUnderlying = FusePoolController.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD);
         uint256 borrowBalanceCurrent = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
 
         uint256 divergence = 
@@ -237,12 +234,11 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Deposit dormant funds into a FusePool, borrow a stable asset and put it into the stable pool */
     function depositDormantFunds() internal {
-        IRariDataProvider rariDataProvider = IRariDataProvider(dataProvider);
         FusePoolController.deposit(comptroller, cToken, dormant());
 
         uint256 balanceOfUnderlying = FusePoolController.balanceOfUnderlying(cToken);
-        uint256 borrowAmountUSD = rariDataProvider.maxBorrowAmountUSD(comptroller, token, balanceOfUnderlying);
-        uint256 idealBorrowBalance = rariDataProvider.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD).div(2);
+        uint256 borrowAmountUSD = FusePoolController.maxBorrowAmountUSD(comptroller, token, balanceOfUnderlying);
+        uint256 idealBorrowBalance = FusePoolController.convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD).div(2);
 
         if(idealBorrowBalance > borrowBalance) borrow(idealBorrowBalance - borrowBalance);
         if(borrowBalance > idealBorrowBalance) repay(borrowBalance - idealBorrowBalance);
