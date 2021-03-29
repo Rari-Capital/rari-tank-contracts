@@ -33,7 +33,7 @@ abstract contract RariTankStorage {
     uint256 internal borrowBalance;
 
     /** @dev The tank's stable pool balance */
-    uint256 internal stablePoolBalance;
+    uint256 internal yieldPoolBalance;
 
     /** @dev Initialized */
     bool internal initialized;

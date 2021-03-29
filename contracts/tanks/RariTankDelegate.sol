@@ -214,10 +214,10 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         bool gainedGreater;
         uint256 currentPoolBalance = RariPoolController.balanceOf();
-        if (currentPoolBalance > borrowBalance) {
-            uint256 threshold = borrowBalance.div(20);
+        if (currentPoolBalance > yieldPoolBalance) {
+            uint256 threshold = yieldPoolBalance.div(20);
             gainedGreater = 
-                (currentPoolBalance - borrowBalance) >= threshold;
+                (currentPoolBalance - yieldPoolBalance) >= threshold;
         }
 
         return (
@@ -248,8 +248,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 currentStablePoolBalance = RariPoolController.balanceOf();
         uint256 currentBorrowBalance = FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
 
-        uint256 profit = currentStablePoolBalance > stablePoolBalance ? 
-            currentStablePoolBalance.sub(stablePoolBalance) : 
+        uint256 profit = currentStablePoolBalance > yieldPoolBalance ? 
+            currentStablePoolBalance.sub(yieldPoolBalance) : 
             0;
 
 
@@ -262,6 +262,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         if(profit == 0) return;
 
         RariPoolController.withdraw(BORROWING_SYMBOL, profit);
+        yieldPoolBalance = RariPoolController.balanceOf();
 
         if(debt >= profit) {
             FusePoolController.repay(comptroller, BORROWING, profit);
@@ -303,13 +304,13 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         borrowBalance += amount;
 
         RariPoolController.deposit(BORROWING_SYMBOL, BORROWING, amount);
-        stablePoolBalance += amount;
+        yieldPoolBalance += amount;
     }
 
     /** @dev Withdraw a stable asset from Rari and repay */
     function repay(uint256 amount) internal {
         RariPoolController.withdraw(BORROWING_SYMBOL, amount);
-        stablePoolBalance -= amount;
+        yieldPoolBalance -= amount;
 
         FusePoolController.repay(comptroller, BORROWING, amount);
         borrowBalance -= amount;
