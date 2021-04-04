@@ -7,7 +7,6 @@ import {RariTankDelegator} from "./RariTankDelegator.sol";
 import {IRariTankFactory} from "./interfaces/IRariTankFactory.sol";
 import {IRariTank} from "./interfaces/IRariTank.sol";
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ICErc20} from "./external/compound/ICErc20.sol";
 import {IComptroller} from "./external/compound/IComptroller.sol";
 import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
@@ -19,7 +18,7 @@ import {IKeep3r} from "./external/keep3r/IKeep3r.sol";
     @author Jet Jadeja
     @dev Deploys RariTankDelegator implementations
 */
-contract RariTankFactory is IRariTankFactory, Ownable {
+contract RariTankFactory is IRariTankFactory {
 
     /*************
     * Constants *
@@ -56,13 +55,6 @@ contract RariTankFactory is IRariTankFactory, Ownable {
      * Constructor *
     ***************/
     constructor(address _fusePoolDirectory) {
-        fusePoolDirectory = _fusePoolDirectory;
-    }
-
-    /********************
-    * External Functions *
-    ********************/
-    function newFusePoolDirectory(address _fusePoolDirectory) external {
         fusePoolDirectory = _fusePoolDirectory;
     }
 

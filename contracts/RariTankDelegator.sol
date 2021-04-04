@@ -15,7 +15,7 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
      * Variables *
     *************/
     /** @dev The address of the tank implementation contract */
-    address public implementation;
+    address public immutable implementation;
 
     /***************
      * Constructor *
@@ -28,7 +28,7 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
         implementation = _implementation;
 
         delegateTo(
-            implementation, 
+            _implementation, 
             abi.encodeWithSignature(
                 "initialize(address,address,address)", 
                 _token, 

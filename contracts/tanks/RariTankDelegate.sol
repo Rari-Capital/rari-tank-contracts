@@ -73,7 +73,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @dev Deposit into the Tank */
     function deposit(uint256 amount) external override  {
         uint256 decimals = ERC20Upgradeable(token).decimals();
-        uint256 priceMantissa = 36 - decimals;
+        uint256 priceMantissa = 18 - decimals;
 
         uint256 price = FusePoolController.getUnderlyingInEth(
             comptroller,
@@ -81,7 +81,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         );
 
         uint256 deposited = price
-            .div(10 ** (priceMantissa - 18))
+            .div(10 ** priceMantissa)
             .mul(amount)
             .div(10**decimals);
         
@@ -140,7 +140,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 balance = underlyingBalanceOf(msg.sender);
 
         require(
-            balance > amount,
+            balance >= amount,
             "RariTankDelegate: Withdrawal amount must be less than balance"
         );
 
