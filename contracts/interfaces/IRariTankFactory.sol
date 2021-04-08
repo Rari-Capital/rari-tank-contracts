@@ -5,6 +5,6 @@ pragma solidity 0.7.3;
     @author Jet Jadeja <jet@rari.capital>
 */
 interface IRariTankFactory {
-    function rebalance(address) external;
+    function rebalance(address, bool) external;
     function deployTank(address, address, address) external returns (address);
 }

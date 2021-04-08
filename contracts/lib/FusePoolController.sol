@@ -2,16 +2,14 @@ pragma solidity ^0.7.3;
 
 /* Interfaces */
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface.sol";
 
 import {ICErc20} from "../external/compound/ICErc20.sol";
 import {IComptroller} from "../external/compound/IComptroller.sol";
 import {IPriceFeed} from "../external/compound/IPriceFeed.sol";
 
-import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface.sol";
-
 /* Libraries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-
 
 /**
     @title FusePoolController
@@ -62,7 +60,7 @@ library FusePoolController {
         uint256 error = IComptroller(comptroller)
             .cTokensByUnderlying(underlying)
             .redeemUnderlying(amount);
-
+            
         require(error == 0, "CErc20: Failed to redeem underlying");
     }
 

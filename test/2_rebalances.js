@@ -33,14 +33,8 @@ describe("RariTankDelegate, RariTankDelegator", async function() {
     });
 
     describe("External interactions", async () => {
-        it("Supplies funds to Fuse, mints fTokens", async () => {
-            await rariTankFactory.connect(keeper).rebalance(tank.address);
-            const cTokenContract = await tank.cToken();
-            const cToken = await ethers.getContractAt(ERC20ABI, cTokenContract);
-            chai.expect((await cToken.balanceOf(tank.address)).gt(0));
-        });
-
         it("Borrows DAI, deposits into stable pool, mints RDPT", async () => {
+            await rariTankFactory.connect(keeper).rebalance(tank.address, constants.USE_WETH);
             const rspt = await ethers.getContractAt(ERC20ABI, constants.RSPT);
             chai.expect((await rspt.balanceOf(tank.address)).gt(0));
         });
@@ -48,14 +42,16 @@ describe("RariTankDelegate, RariTankDelegator", async function() {
         it("Earning yield increases exchangeRate", async () => {
             const dai = await ethers.getContractAt(ERC20ABI, constants.DAI);
             const dai_holder = await ethers.provider.getSigner(constants.DAI_HOLDER);
-            
+            const exchangeRate = await tank.callStatic.exchangeRateCurrent();
+
             dai.connect(dai_holder).transfer(constants.RARI_FUND_CONTROLLER, "1000000000000000000000000");
 
             await hre.network.provider.request({
                 method: "evm_mine",
             });
             
-            await rariTankFactory.connect(keeper).rebalance(tank.address);
+            await rariTankFactory.connect(keeper).rebalance(tank.address, constants.USE_WETH);
+            chai.expect((await tank.callStatic.exchangeRateCurrent()).gt(exchangeRate));
         })
     });
 
@@ -67,19 +63,5 @@ describe("RariTankDelegate, RariTankDelegator", async function() {
         it("Reverts if withdrawal amount is too large", async () => {
             await tank.connect(user).withdraw(constants.LARGE_WITHDRAWAL_AMOUNT).should.be.rejectedWith("revert RariTankDelegate");
         });
-
-        it("Dormant funds can be used for withdrawals", async () => {
-            //The constants.WITHDRAWAL_AMOUNT will be less than constants.AMOUNT (because of Keep3r Fee)
-            token.connect(user).approve(rariTankDelegator, constants.WITHDRAWAL_AMOUNT);
-            await tank.connect(user).deposit(constants.WITHDRAWAL_AMOUNT);
-            await tank.connect(user).withdraw(constants.AMOUNT).should.be.not.rejectedWith("revert");
-        });
-
-        it("Withdraws if amount is less than dormant", async () => {
-            // constants.amount is less than constants.withdrawal_amount
-            token.connect(user).approve(rariTankDelegator, constants.LARGE_WITHDRAWAL_AMOUNT);
-            await tank.connect(user).deposit(constants.LARGE_WITHDRAWAL_AMOUNT);
-            await tank.connect(user).withdraw(constants.AMOUNT).should.be.not.rejectedWith("revert");
-        })
     });
 });

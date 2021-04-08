@@ -16,8 +16,8 @@ const constants = require("./helpers/constants");
 
 const RariTankDelegatorABI = require("./abi/RariFundTank.json");
 const ERC20ABI = require("./abi/ERC20.json");
-let rariTankFactory, tank, wbtc, keeper;
 let user, deployer;
+let rariTankFactory, tank, wbtc, keeper;
 
 describe("RariTankDelegator, RariTankDelegate", async function() {
     this.timeout(300000)
@@ -27,9 +27,8 @@ describe("RariTankDelegator, RariTankDelegate", async function() {
 
         [rariTankFactory, rariTankDelegator, keeper] = await contracts;
         tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
-        console.log("\n\n\n\n\n");
+        console.log("\n");
         wbtc = await ethers.getContractAt(ERC20ABI, constants.TOKEN);
-        console.log("RariTankDelegator, RariTankDelegate");
     })
 
     describe("Deposits function correctly", async () => {
@@ -39,6 +38,12 @@ describe("RariTankDelegator, RariTankDelegate", async function() {
             await tank.deposit(depositAmount);
             chai.expect((await tank.totalSupply()).gt(0));
         });
+
+        it("Supplies collateral to Fuse, mints cTokens", async () => {
+            const cTokenContract = await tank.cToken();
+            const cToken = await ethers.getContractAt(ERC20ABI, cTokenContract);
+            chai.expect((await cToken.balanceOf(tank.address)).gt(0));
+        })
 
         it("Reverts if deposit amount is below $500", async () => {
             await wbtc.connect(user).approve(rariTankDelegator, "100000"); //Should be too small for every asset

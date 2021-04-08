@@ -12,6 +12,10 @@ import {IComptroller} from "./external/compound/IComptroller.sol";
 import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
 
 import {IKeep3r} from "./external/keep3r/IKeep3r.sol";
+import {AggregatorV3Interface} from "./external/chainlink/AggregatorV3Interface.sol";
+
+/* Libraries */
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
     @title RariTankFactory
@@ -19,11 +23,15 @@ import {IKeep3r} from "./external/keep3r/IKeep3r.sol";
     @dev Deploys RariTankDelegator implementations
 */
 contract RariTankFactory is IRariTankFactory {
+    using SafeMath for uint256;
 
     /*************
     * Constants *
     *************/
     IKeep3r internal constant KPR = IKeep3r(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
+    AggregatorV3Interface constant FASTGAS = AggregatorV3Interface(
+        0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C
+    );
 
     /*************
     * Variables *
@@ -44,11 +52,17 @@ contract RariTankFactory is IRariTankFactory {
     /*************
      * Modifiers *
     **************/
-    modifier keep() {
+    modifier keep(address tank) {
         uint256 left = gasleft();
         require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
         _;
-        KPR.receiptETH(msg.sender, left - gasleft());
+        (, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
+        uint256 pay = (left - gasleft()).mul(uint(gasPrice));
+        IRariTank(tank).supplyKeeperPayment(
+            pay.div(1000).mul(1005)
+        );
+        KPR.addCreditETH{value: pay.div(1000).mul(1005)}(address(this));
+        KPR.receiptETH(msg.sender, pay);
     }
 
     /***************
@@ -61,8 +75,8 @@ contract RariTankFactory is IRariTankFactory {
     /**
     @dev Rebalance the tank
     */
-    function rebalance(address tank) external override keep {
-        IRariTank(tank).rebalance();
+    function rebalance(address tank, bool useWeth) external override keep(tank) {
+        IRariTank(tank).rebalance(useWeth);
     }
 
     /** 
@@ -110,4 +124,6 @@ contract RariTankFactory is IRariTankFactory {
     function getTankByImplementation(address erc20Contract, address implementation) external view returns (address) {
         return tankByImplementation[erc20Contract][implementation];
     }
+
+    receive() external payable {}
 }

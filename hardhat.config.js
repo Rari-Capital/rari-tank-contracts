@@ -13,10 +13,11 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.ALCHEMY,
+        url: process.env.FORKING_URL,
         blockNumber: 12126175,
       },
       gas: 8000000,
+      blockNumber: 12126175,
       blockGasLimit: 8000000,
       gasPrice: 0,
       timeout: 100000,
@@ -28,7 +29,17 @@ module.exports = {
       gasPrice: 0,
     },
   },
-  compilers: [{ version: "0.7.3" }, { version: "0.6.6" }],
+
+  solidity: {
+    version: "0.7.3",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000
+      }
+    }
+  },
+
   paths: {
     sources: "./contracts",
     tests: "./test",

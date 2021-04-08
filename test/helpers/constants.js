@@ -5,7 +5,8 @@ tokens = [
         holder: "0x0C4809bE72F9E117D75381438c5dAeC8AbE75BaD",
         depositAmount: "100000000",
         withdrawalAmount: "100000500",
-        largeWithdrawalAmount: "200000500"
+        largeWithdrawalAmount: "200000500",
+        useWeth: false,
     },
     {
         symbol: "USDC",
@@ -13,7 +14,17 @@ tokens = [
         holder: "0x55FE002aefF02F77364de339a1292923A15844B8",
         depositAmount: "50000000000",
         withdrawalAmount: "50500000000",
-        largeWithdrawalAmount: "100000000000"
+        largeWithdrawalAmount: "100000000000",
+        useWeth: false,
+    },
+    {
+        symbol: "RGT",
+        address: "0xD291E7a03283640FDc51b121aC401383A46cC623",
+        holder: "0xC1d1B12bCE4a73310F268d49EFAB95eb2A679609",
+        depositAmount: "4500000000000000000000",
+        withdrawalAmount: "4505000000000000000000",
+        largeWithdrawalAmount: "9000000000000000000000",
+        useWeth: true,
     },
 ];
 
@@ -26,6 +37,7 @@ module.exports = {
     AMOUNT: token.depositAmount,
     WITHDRAWAL_AMOUNT: token.withdrawalAmount,
     LARGE_WITHDRAWAL_AMOUNT: token.largeWithdrawalAmount,
+    USE_WETH: token.useWeth,
 
     DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
     DAI_HOLDER: "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c",

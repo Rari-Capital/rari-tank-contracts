@@ -8,6 +8,8 @@ interface IRariTank {
     function deposit(uint256) external;
     function withdraw(uint256) external;
 
-    function rebalance() external;
+
+    function rebalance(bool) external;
+    function supplyKeeperPayment(uint256) external;
     function exchangeRateCurrent() external returns (uint256);
 }
