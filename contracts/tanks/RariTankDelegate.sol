@@ -19,6 +19,8 @@ import {FusePoolController} from "../lib/FusePoolController.sol";
 import {RariPoolController} from "../lib/RariPoolController.sol";
 import {UniswapV2Library} from "../external/uniswapv2/UniswapV2Library.sol";
 
+import "hardhat/console.sol";
+
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {
@@ -113,16 +115,25 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /** @dev Pay Keep3r Bot */
-    function supplyKeeperPayment(uint256 amount) external override onlyFactory {
+    function supplyKeeperPayment(uint256 amount)
+        external
+        override
+        onlyFactory
+        returns (address, uint256)
+    {
         address[] memory path = new address[](2);
         path[0] = token;
         path[1] = router.WETH();
-        uint256 swapAmount =
+        uint256 paymentAmount =
             UniswapV2Library.getAmountsIn(router.factory(), amount, path)[0];
 
-        FusePoolController.withdraw(comptroller, token, swapAmount);
-        IERC20(token).approve(address(router), swapAmount);
-        router.swapTokensForExactETH(amount, swapAmount, path, factory, block.timestamp);
+        if(paymentAmount >= totalUnderlyingBalance().div(4)) { 
+            paymentAmount = paymentAmount.div(10).mul(14);
+            _withdrawAndRepay(paymentAmount); 
+        } else FusePoolController.withdraw(comptroller, token, paymentAmount);
+        IERC20(token).approve(factory, paymentAmount);
+
+        return (token, paymentAmount);
     }
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
@@ -175,7 +186,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Get the tank's total underlying balance */
     function totalUnderlyingBalance() public returns (uint256) {
-        return FusePoolController.balanceOfUnderlying(token);
+        return FusePoolController.balanceOfUnderlying(cToken);
     }
 
     /********************
@@ -237,7 +248,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         internal
         returns (uint256 profit, bool profitSufficient)
     {
-        profit = RariPoolController.balanceOf().sub(yieldPoolBalance);
+        profit = RariPoolController.balanceOf().sub(borrowBalance);
 
         uint256 threshold = yieldPoolBalance.mul(percentThreshold).div(1e18);
         profitSufficient = profit > threshold;
@@ -261,17 +272,19 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Withdraw funds from protocols */
     function _withdraw(uint256 amount) internal {
-        // Calculate the amount that must be returned
-        uint256 totalSupplied = FusePoolController.balanceOfUnderlying(cToken);
+        _withdrawAndRepay(amount);
+    }
+
+    function _withdrawAndRepay(uint256 amount) internal {
+        uint256 totalSupplied = totalUnderlyingBalance();
         uint256 represents = amount.mul(1e18).div(totalSupplied);
 
         uint256 totalBorrowed =
-            FusePoolController.borrowBalanceCurrent(comptroller, borrowing);
+            RariPoolController.balanceOf();
         uint256 due = totalBorrowed.mul(represents).div(1e18);
 
         _repay(due, 0);
 
-        // Withdraw funds from Fuse
         FusePoolController.withdraw(comptroller, token, amount);
     }
 
@@ -280,10 +293,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         FusePoolController.borrow(comptroller, borrowing, borrowAmount);
         borrowBalance += borrowAmount;
 
-        depositAmount = depositAmount != 0 ? borrowAmount - depositAmount : borrowAmount;
-
-        RariPoolController.deposit(borrowSymbol, borrowing, depositAmount);
-        yieldPoolBalance += depositAmount;
+        RariPoolController.deposit(borrowSymbol, borrowing, borrowAmount - depositAmount);
+        yieldPoolBalance += borrowAmount - depositAmount;
     }
 
     /** @dev Withdraw a stable asset from Rari and repay */
@@ -291,12 +302,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         RariPoolController.withdraw(borrowSymbol, withdrawalAmount);
         yieldPoolBalance -= withdrawalAmount;
 
-        repayAmount = repayAmount != 0
-            ? withdrawalAmount - repayAmount
-            : withdrawalAmount;
-
-        FusePoolController.repay(comptroller, borrowing, repayAmount);
-        borrowBalance -= repayAmount;
+        FusePoolController.repay(comptroller, borrowing, withdrawalAmount - repayAmount);
+        borrowBalance -= (withdrawalAmount - repayAmount);
     }
 
     /** 

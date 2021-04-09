@@ -6,10 +6,12 @@ pragma solidity ^0.7.3;
 */
 interface IRariTank {
     function deposit(uint256) external;
+
     function withdraw(uint256) external;
 
-
     function rebalance(bool) external;
-    function supplyKeeperPayment(uint256) external;
+
+    function supplyKeeperPayment(uint256) external returns (address, uint256);
+
     function exchangeRateCurrent() external returns (uint256);
 }

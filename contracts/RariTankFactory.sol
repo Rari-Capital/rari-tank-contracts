@@ -8,6 +8,8 @@ import {IRariTankFactory} from "./interfaces/IRariTankFactory.sol";
 import {IRariTank} from "./interfaces/IRariTank.sol";
 
 import {ICErc20} from "./external/compound/ICErc20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {IComptroller} from "./external/compound/IComptroller.sol";
 import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
 
@@ -16,6 +18,7 @@ import {AggregatorV3Interface} from "./external/chainlink/AggregatorV3Interface.
 
 /* Libraries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 /**
     @title RariTankFactory
@@ -24,6 +27,7 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 */
 contract RariTankFactory is IRariTankFactory {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     /*************
      * Constants *
@@ -56,10 +60,20 @@ contract RariTankFactory is IRariTankFactory {
         require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
         _;
         (, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
-        uint256 pay = (left - gasleft()).mul(uint256(gasPrice));
-        IRariTank(tank).supplyKeeperPayment(pay.div(1000).mul(1005));
-        KPR.addCreditETH{value: pay.div(1000).mul(1005)}(address(this));
-        KPR.receiptETH(msg.sender, pay);
+
+        uint256 pay = (left - gasleft()).mul(uint256(gasPrice)).div(10).mul(13);
+        (address asset, uint256 amount) = IRariTank(tank).supplyKeeperPayment(pay);
+
+        if (asset == address(0)) {
+            KPR.addCreditETH{value: pay.div(1000).mul(1005)}(address(this));
+            KPR.receiptETH(msg.sender, pay);
+        } else {
+            IERC20(asset).safeTransferFrom(tank, address(this), amount);
+            IERC20(asset).approve(address(KPR), amount);
+
+            KPR.addCredit(asset, address(this), amount);
+            KPR.receipt(asset, msg.sender, amount.div(1000).mul(997));
+        }
     }
 
     /***************
