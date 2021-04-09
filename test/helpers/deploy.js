@@ -3,7 +3,6 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const web3 = hre.web3;
 
-const prompt = require('prompt-sync')();
 const Fuse = require("./fuse-sdk/src/index");
 const fuse = new Fuse(web3.currentProvider);
 
@@ -25,7 +24,6 @@ async function impersonateAccounts() {
     method: "hardhat_impersonateAccount",
     params: [addresses.DAI_HOLDER],
   });
-
 }
 
 async function deploy() {
@@ -38,7 +36,6 @@ async function deploy() {
 
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
-  const Keeper = await ethers.getContractFactory("Keeper");
 
   const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
@@ -50,22 +47,24 @@ async function deploy() {
   await rariTankFactory.deployed();
 
   // Add the tank factory as a Keep3r job
-  const governance = await ethers.provider.getSigner(addresses.KEEP3R_GOVERNANCE);
+  const governance = await ethers.provider.getSigner(
+    addresses.KEEP3R_GOVERNANCE
+  );
   const keep3r = await ethers.getContractAt(Keep3rABI, addresses.KEEP3R);
 
   keep3r.connect(governance).addJob(rariTankFactory.address);
 
-  await rariTankFactory.deployTank(token, addresses.FUSE_COMPTROLLER, tankDelegate.address);
-  const tank = await rariTankFactory.getTankByImplementation(token, tankDelegate.address);
-
-  //const keeper = await Keeper.deploy(rariTankFactory.address);
-  
-  // await hre.network.provider.request({
-  //   method: "evm_increaseTime",
-  //   params: [3000000000],
-  // }); 
-
-  // await keeper.activate();
+  await rariTankFactory.deployTank(
+    token,
+    dai,
+    addresses.FUSE_COMPTROLLER,
+    addresses.ROUTER,
+    tankDelegate.address
+  );
+  const tank = await rariTankFactory.getTankByImplementation(
+    token,
+    tankDelegate.address
+  );
 
   const oracle = await ethers.getContractAt(
     Keep3rOracleABI,
@@ -78,11 +77,13 @@ async function deploy() {
   });
 
   const bot = await ethers.provider.getSigner(addresses.ORACLE_BOT);
-  oracle.connect(bot).update(
-    "0x1ceb5cb57c4d4e2b2433641b95dd330a33185a44",
-    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-  );
-  
+  oracle
+    .connect(bot)
+    .update(
+      "0x1ceb5cb57c4d4e2b2433641b95dd330a33185a44",
+      "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+    );
+
   console.log(`USING ${addresses.TOKEN_SYMBOL}`);
 
   return [rariTankFactory, tank, bot];
