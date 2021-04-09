@@ -21,7 +21,9 @@ import {UniswapV2Library} from "../external/uniswapv2/UniswapV2Library.sol";
 
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {
+    ERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /**
     @title Rari Tank Delegate
@@ -48,7 +50,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
      ***************/
     function initialize(
         address _token,
+        address _borrowing,
         address _comptroller,
+        address _router,
         address _factory
     ) external {
         require(!initialized, "Contract already initialized");
@@ -62,9 +66,17 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         token = _token;
         comptroller = _comptroller;
         factory = _factory;
+        borrowing = _borrowing;
+        router = IUniswapV2Router02(_router);
 
+        borrowSymbol = ERC20Upgradeable(borrowing).symbol();
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
         require(cToken != address(0), "Unsupported asset");
+        require(
+            address(IComptroller(_comptroller).cTokensByUnderlying(_borrowing)) !=
+                address(0),
+            "Unsupported asset"
+        );
     }
 
     /********************
@@ -104,12 +116,13 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function supplyKeeperPayment(uint256 amount) external override onlyFactory {
         address[] memory path = new address[](2);
         path[0] = token;
-        path[1] = ROUTER.WETH();
-        uint256 swapAmount = UniswapV2Library.getAmountsIn(ROUTER.factory(), amount, path)[0];
-        
+        path[1] = router.WETH();
+        uint256 swapAmount =
+            UniswapV2Library.getAmountsIn(router.factory(), amount, path)[0];
+
         FusePoolController.withdraw(comptroller, token, swapAmount);
-        IERC20(token).approve(address(ROUTER), swapAmount);
-        ROUTER.swapTokensForExactETH(amount, swapAmount, path, factory, block.timestamp);
+        IERC20(token).approve(address(router), swapAmount);
+        router.swapTokensForExactETH(amount, swapAmount, path, factory, block.timestamp);
     }
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
@@ -138,7 +151,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /*******************
      * Public Functions *
-    ********************/
+     ********************/
 
     /** @return The exchange rate between the RTT and the underlying token */
     function exchangeRateCurrent() public override returns (uint256) {
@@ -172,22 +185,22 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     /** @dev Register profits and repay interest */
     function _registerProfit(uint256 profit, bool useWeth) internal {
         uint256 currentBorrowBalance =
-            FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
+            FusePoolController.borrowBalanceCurrent(comptroller, borrowing);
 
         uint256 debt =
             currentBorrowBalance > borrowBalance
                 ? currentBorrowBalance.sub(borrowBalance)
                 : 0;
 
-        RariPoolController.withdraw(BORROWING_SYMBOL, profit);
+        RariPoolController.withdraw(borrowSymbol, profit);
         yieldPoolBalance = RariPoolController.balanceOf();
 
         if (debt >= profit) {
-            FusePoolController.repay(comptroller, BORROWING, profit);
+            FusePoolController.repay(comptroller, borrowing, profit);
             return;
         }
 
-        FusePoolController.repay(comptroller, BORROWING, debt);
+        FusePoolController.repay(comptroller, borrowing, debt);
 
         uint256 underlyingProfit = _swapInterestForUnderlying(profit - debt, useWeth);
         FusePoolController.deposit(comptroller, cToken, underlyingProfit);
@@ -242,7 +255,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
         return
             FusePoolController
-                .convertUSDToUnderlying(comptroller, BORROWING, borrowAmountUSD)
+                .convertUSDToUnderlying(comptroller, borrowing, borrowAmountUSD)
                 .div(2);
     }
 
@@ -253,7 +266,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 represents = amount.mul(1e18).div(totalSupplied);
 
         uint256 totalBorrowed =
-            FusePoolController.borrowBalanceCurrent(comptroller, BORROWING);
+            FusePoolController.borrowBalanceCurrent(comptroller, borrowing);
         uint256 due = totalBorrowed.mul(represents).div(1e18);
 
         _repay(due, 0);
@@ -264,25 +277,25 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
 
     /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
     function _borrow(uint256 borrowAmount, uint256 depositAmount) internal {
-        FusePoolController.borrow(comptroller, BORROWING, borrowAmount);
+        FusePoolController.borrow(comptroller, borrowing, borrowAmount);
         borrowBalance += borrowAmount;
 
         depositAmount = depositAmount != 0 ? borrowAmount - depositAmount : borrowAmount;
 
-        RariPoolController.deposit(BORROWING_SYMBOL, BORROWING, depositAmount);
+        RariPoolController.deposit(borrowSymbol, borrowing, depositAmount);
         yieldPoolBalance += depositAmount;
     }
 
     /** @dev Withdraw a stable asset from Rari and repay */
     function _repay(uint256 withdrawalAmount, uint256 repayAmount) internal {
-        RariPoolController.withdraw(BORROWING_SYMBOL, withdrawalAmount);
+        RariPoolController.withdraw(borrowSymbol, withdrawalAmount);
         yieldPoolBalance -= withdrawalAmount;
 
         repayAmount = repayAmount != 0
             ? withdrawalAmount - repayAmount
             : withdrawalAmount;
 
-        FusePoolController.repay(comptroller, BORROWING, repayAmount);
+        FusePoolController.repay(comptroller, borrowing, repayAmount);
         borrowBalance -= repayAmount;
     }
 
@@ -290,30 +303,34 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         @dev Facilitate a swap from the borrowed token to the underlying token 
         @return The amount of tokens returned by Uniswap
     */
-    function _swapInterestForUnderlying(uint256 amount, bool useWeth) internal returns (uint256) {
+    function _swapInterestForUnderlying(uint256 amount, bool useWeth)
+        internal
+        returns (uint256)
+    {
         uint256 size;
-        if(useWeth) size = 3;
+        if (useWeth) size = 3;
         else size = 2;
 
         address[] memory path = new address[](size);
-        path[0] = BORROWING;
+        path[0] = borrowing;
 
-        if(useWeth) {
-            path[1] = ROUTER.WETH();
+        if (useWeth) {
+            path[1] = router.WETH();
             path[2] = token;
         } else {
             path[1] = token;
         }
 
-        IERC20(BORROWING).approve(address(ROUTER), amount);
-        
-        return ROUTER.swapExactTokensForTokens(
-            amount,
-            0,
-            path,
-            address(this),
-            block.timestamp
-        )[size - 1];
+        IERC20(borrowing).approve(address(router), amount);
+
+        return
+            router.swapExactTokensForTokens(
+                amount,
+                0,
+                path,
+                address(this),
+                block.timestamp
+            )[size - 1];
     }
 
     receive() external payable {}
