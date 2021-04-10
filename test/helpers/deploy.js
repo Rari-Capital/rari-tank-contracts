@@ -56,15 +56,14 @@ async function deploy() {
 
   await rariTankFactory.deployTank(
     token,
-    dai,
     addresses.FUSE_COMPTROLLER,
     addresses.ROUTER,
     tankDelegate.address
   );
-  const tank = await rariTankFactory.getTankByImplementation(
-    token,
-    tankDelegate.address
-  );
+
+  const tank = (await rariTankFactory.getTanksByToken(
+    token
+  ))[0];
 
   const oracle = await ethers.getContractAt(
     Keep3rOracleABI,
@@ -84,9 +83,7 @@ async function deploy() {
       "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
     );
 
-  console.log(`USING ${addresses.TOKEN_SYMBOL}`);
-
-  return [rariTankFactory, tank, bot];
+  return [rariTankFactory, tank, bot, tankDelegate];
 }
 
 module.exports = deploy();
