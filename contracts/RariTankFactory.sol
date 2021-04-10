@@ -16,6 +16,8 @@ import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
 import {IKeep3r} from "./external/keep3r/IKeep3r.sol";
 import {AggregatorV3Interface} from "./external/chainlink/AggregatorV3Interface.sol";
 
+import "hardhat/console.sol";
+
 /* Libraries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -43,14 +45,32 @@ contract RariTankFactory is IRariTankFactory {
     /** @dev The address of the FusePoolDirectory */
     address private fusePoolDirectory;
 
-    /** @dev Maps the underlying token to a map from implementation to tank  */
-    mapping(address => mapping(address => address)) private tankByImplementation;
+    /** @dev An array containing the address of all tanks */
+    address[] public tanks;
 
-    /** @dev Maps the address of an implementation to an array of tanks that use it */
-    mapping(address => address[]) private tanksByImplementation;
+    /** @dev Maps the token to a map from Comptroller to a map from implementation to tank */
+    mapping(address => mapping(address => mapping(address => address))) public getTank;
 
-    /** @dev Maps the underlying token to an array of tanks supporting it */
-    mapping(address => address[]) private tanksByUnderlying;
+    /** @dev Maps tokens to an array of tanks */
+    mapping(address => address[]) private _getTanksByToken;
+
+    /** @dev Maps a Comptroller to an array of tanks */
+    mapping(address => address[]) private _getTanksByComptroller;
+
+    /** @dev Maps an implementation to an array of tanks */
+    mapping(address => address[]) private _getTanksByImplementation;
+
+    /** @dev Maps token to a map from implementation to an array of tanks */
+    mapping(address => mapping(address => address[]))
+        private _getTanksByTokenAndImplementation;
+
+    /** @dev Maps the token to a map from Comptroller to an array of tanks */
+    mapping(address => mapping(address => address[]))
+        private _getTanksByTokenAndComptroller;
+
+    /** @dev Maps the Comptroller to a map from implementation to an array of tanks */
+    mapping(address => mapping(address => address[]))
+        private _getTanksByComptrollerAndImplementation;
 
     /*************
      * Modifiers *
@@ -59,9 +79,10 @@ contract RariTankFactory is IRariTankFactory {
         uint256 left = gasleft();
         require(KPR.isKeeper(msg.sender), "::isKeeper: keeper is not registered");
         _;
-        (, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
+        //(, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
+        uint256 gasPrice = 100 * 1e9;
 
-        uint256 pay = (left - gasleft()).mul(uint256(gasPrice)).div(10).mul(13);
+        uint256 pay = (left - gasleft()).mul(uint256(gasPrice)).div(100).mul(125);
         (address asset, uint256 amount) = IRariTank(tank).supplyKeeperPayment(pay);
 
         if (asset == address(0)) {
@@ -83,6 +104,10 @@ contract RariTankFactory is IRariTankFactory {
         fusePoolDirectory = _fusePoolDirectory;
     }
 
+    /********************
+     * External Functions *
+     *********************/
+
     /**
     @dev Rebalance the tank
     */
@@ -99,7 +124,6 @@ contract RariTankFactory is IRariTankFactory {
     */
     function deployTank(
         address erc20Contract,
-        address borrowing,
         address comptroller,
         address router,
         address implementation
@@ -107,23 +131,31 @@ contract RariTankFactory is IRariTankFactory {
         // Input validation
         require(
             IFusePoolDirectory(fusePoolDirectory).poolExists(comptroller),
-            "RariTankFactory: Invalid Pool"
+            "RariTankFactory: Invalid FusePool"
+        );
+
+        require(
+            getTank[erc20Contract][comptroller][implementation] == address(0),
+            "RariTankFactory: Tank already exists"
         );
 
         RariTankDelegator tank =
-            new RariTankDelegator(
-                erc20Contract,
-                borrowing,
-                comptroller,
-                router,
-                implementation
-            );
+            new RariTankDelegator(erc20Contract, comptroller, router, implementation);
 
         address tankAddr = address(tank);
 
-        tankByImplementation[erc20Contract][implementation] = tankAddr;
-        tanksByImplementation[implementation].push(tankAddr);
-        tanksByUnderlying[erc20Contract].push(tankAddr);
+        tanks.push(tankAddr);
+        getTank[erc20Contract][comptroller][implementation] = tankAddr;
+
+        _getTanksByToken[erc20Contract].push(tankAddr);
+        _getTanksByComptroller[comptroller].push(tankAddr);
+        _getTanksByImplementation[implementation].push(tankAddr);
+
+        _getTanksByTokenAndComptroller[erc20Contract][comptroller].push(tankAddr);
+        _getTanksByTokenAndImplementation[erc20Contract][implementation].push(tankAddr);
+        _getTanksByComptrollerAndImplementation[comptroller][implementation].push(
+            tankAddr
+        );
 
         return tankAddr;
     }
@@ -131,29 +163,48 @@ contract RariTankFactory is IRariTankFactory {
     /*****************
      * View Functions *
      ******************/
-    /** 
-        @dev Given a token
-        @return a list of tanks that support it 
-    */
-    function getTanksByUnderlying(address erc20Contract)
+    function getTanksByToken(address token) external view returns (address[] memory) {
+        return _getTanksByToken[token];
+    }
+
+    function getTanksByImplementation(address impl)
         external
         view
         returns (address[] memory)
     {
-        address[] memory tanks = tanksByUnderlying[erc20Contract];
-        return tanks;
+        return _getTanksByImplementation[impl];
     }
 
-    /** 
-        @dev Given an token and implementation address 
-        @return tank that supports the token and uses the implementation contract
-    */
-    function getTankByImplementation(address erc20Contract, address implementation)
+    function getTanksByComptroller(address comptroller)
         external
         view
-        returns (address)
+        returns (address[] memory)
     {
-        return tankByImplementation[erc20Contract][implementation];
+        return _getTanksByComptroller[comptroller];
+    }
+
+    function getTanksByTokenAndImplementation(address token, address impl)
+        external
+        view
+        returns (address[] memory)
+    {
+        return _getTanksByTokenAndImplementation[token][impl];
+    }
+
+    function getTanksByTokenAndComptroller(address token, address comptroller)
+        external
+        view
+        returns (address[] memory)
+    {
+        return _getTanksByTokenAndComptroller[token][comptroller];
+    }
+
+    function getTanksByComptrollerAndImplementation(address comptroller, address impl)
+        external
+        view
+        returns (address[] memory)
+    {
+        return _getTanksByTokenAndComptroller[comptroller][impl];
     }
 
     receive() external payable {}

@@ -52,7 +52,6 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
      ***************/
     function initialize(
         address _token,
-        address _borrowing,
         address _comptroller,
         address _router,
         address _factory
@@ -68,14 +67,18 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         token = _token;
         comptroller = _comptroller;
         factory = _factory;
-        borrowing = _borrowing;
         router = IUniswapV2Router02(_router);
+
+        /* 
+        Ideally, this would be a constant state variable, but since this is a proxy contract, it would be unsafe
+        */
+        borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
         borrowSymbol = ERC20Upgradeable(borrowing).symbol();
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
         require(cToken != address(0), "Unsupported asset");
         require(
-            address(IComptroller(_comptroller).cTokensByUnderlying(_borrowing)) !=
+            address(IComptroller(_comptroller).cTokensByUnderlying(borrowing)) !=
                 address(0),
             "Unsupported asset"
         );
@@ -127,9 +130,9 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 paymentAmount =
             UniswapV2Library.getAmountsIn(router.factory(), amount, path)[0];
 
-        if(paymentAmount >= totalUnderlyingBalance().div(4)) { 
+        if (paymentAmount >= totalUnderlyingBalance().div(4)) {
             paymentAmount = paymentAmount.div(10).mul(14);
-            _withdrawAndRepay(paymentAmount); 
+            _withdrawAndRepay(paymentAmount);
         } else FusePoolController.withdraw(comptroller, token, paymentAmount);
         IERC20(token).approve(factory, paymentAmount);
 
@@ -190,8 +193,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /********************
-     * Internal Functions *
-     *********************/
+    * Internal Functions *
+    *********************/
 
     /** @dev Register profits and repay interest */
     function _registerProfit(uint256 profit, bool useWeth) internal {
@@ -279,8 +282,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         uint256 totalSupplied = totalUnderlyingBalance();
         uint256 represents = amount.mul(1e18).div(totalSupplied);
 
-        uint256 totalBorrowed =
-            RariPoolController.balanceOf();
+        uint256 totalBorrowed = RariPoolController.balanceOf();
         uint256 due = totalBorrowed.mul(represents).div(1e18);
 
         _repay(due, 0);

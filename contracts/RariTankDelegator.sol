@@ -23,7 +23,6 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
      ***************/
     constructor(
         address _token,
-        address _borrowing,
         address _comptroller,
         address _router,
         address _implementation
@@ -33,9 +32,8 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
         delegateTo(
             _implementation,
             abi.encodeWithSignature(
-                "initialize(address,address,address,address,address)",
+                "initialize(address,address,address,address)",
                 _token,
-                _borrowing,
                 _comptroller,
                 _router,
                 msg.sender
