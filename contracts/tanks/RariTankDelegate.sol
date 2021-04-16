@@ -70,7 +70,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         router = IUniswapV2Router02(_router);
 
         /* 
-        Ideally, this would be a constant state variable, but since this is a proxy contract, it would be unsafe
+            Ideally, this would be a constant state variable, 
+            but since this is a proxy contract, it would be unsafe
         */
         borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
@@ -80,7 +81,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         require(
             address(IComptroller(_comptroller).cTokensByUnderlying(borrowing)) !=
                 address(0),
-            "Unsupported asset"
+            "Unsupported borrow asset"
         );
     }
 
@@ -143,7 +144,7 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     function rebalance(bool useWeth) external override onlyFactory {
         (uint256 profit, bool profitSufficient) = _getProfits(5e15); //0.5%
         (uint256 divergence, bool idealGreater, bool divergenceSufficient) =
-            _getBorrowBalanceDivergence(75e17);
+            _getBorrowBalanceDivergence(2e17);
 
         require(
             profitSufficient || divergenceSufficient,
@@ -193,8 +194,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
     }
 
     /********************
-    * Internal Functions *
-    *********************/
+     * Internal Functions *
+     *********************/
 
     /** @dev Register profits and repay interest */
     function _registerProfit(uint256 profit, bool useWeth) internal {

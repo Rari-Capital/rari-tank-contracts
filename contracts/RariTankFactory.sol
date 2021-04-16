@@ -82,19 +82,14 @@ contract RariTankFactory is IRariTankFactory {
         //(, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
         uint256 gasPrice = 100 * 1e9;
 
-        uint256 pay = (left - gasleft()).mul(uint256(gasPrice)).div(100).mul(125);
+        uint256 pay = (left - gasleft()).mul(uint256(gasPrice)).div(10).mul(13);
         (address asset, uint256 amount) = IRariTank(tank).supplyKeeperPayment(pay);
 
-        if (asset == address(0)) {
-            KPR.addCreditETH{value: pay.div(1000).mul(1005)}(address(this));
-            KPR.receiptETH(msg.sender, pay);
-        } else {
-            IERC20(asset).safeTransferFrom(tank, address(this), amount);
-            IERC20(asset).approve(address(KPR), amount);
+        IERC20(asset).safeTransferFrom(tank, address(this), amount);
+        IERC20(asset).approve(address(KPR), amount);
 
-            KPR.addCredit(asset, address(this), amount);
-            KPR.receipt(asset, msg.sender, amount.div(1000).mul(997));
-        }
+        KPR.addCredit(asset, address(this), amount);
+        KPR.receipt(asset, msg.sender, amount.div(1000).mul(997));
     }
 
     /***************
