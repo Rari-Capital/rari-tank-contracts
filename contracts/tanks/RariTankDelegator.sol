@@ -1,17 +1,14 @@
 pragma solidity 0.7.3;
 
 /* Interfaces */
-import {RariTankStorage} from "./tanks/RariTankStorage.sol";
-import {
-    ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {RariTankStorage} from "./RariTankStorage.sol";
 
 /**
     @title RariTankDelegator
     @author Jet Jadeja <jet@rari.capital>
     @dev Uses the RariTankDelegate to handle interactions with Fuse
 */
-contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
+contract RariTankDelegator is RariTankStorage {
     /*************
      * Variables *
      *************/
@@ -41,6 +38,10 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
         );
     }
 
+    /**********************
+     * Fallback Functions *
+     **********************/
+
     fallback() external payable {
         require(msg.value == 0, "RariTankDelegator: Cannot send funds to contract");
         (bool success, ) = implementation.delegatecall(msg.data);
@@ -59,6 +60,12 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
         }
     }
 
+    receive() external payable {}
+
+    /********************
+     * Internal Functions *
+     *********************/
+
     function delegateTo(address callee, bytes memory data)
         internal
         returns (bytes memory)
@@ -71,6 +78,4 @@ contract RariTankDelegator is RariTankStorage, ERC20Upgradeable {
         }
         return returnData;
     }
-
-    receive() external payable {}
 }

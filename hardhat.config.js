@@ -4,7 +4,7 @@ require("@nomiclabs/hardhat-web3");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 
-require("dotenv").config()
+require("dotenv").config();
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -35,26 +35,26 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 1000
-      }
-    }
+        runs: 1000,
+      },
+    },
   },
 
   paths: {
     sources: "./contracts",
     tests: "./test",
     cache: "./cache",
-    artifacts: "./artifacts"
+    artifacts: "./artifacts",
   },
 
   tenderly: {
     username: "JetDeveloping",
-    project: "tanks"
+    project: "tanks",
   },
   gasReporter: {
     currency: "USD",
     gasPrice: 100,
     enabled: true,
-    coinmarketcap: process.env.COIN_MARKET_CAP
-  }
+    coinmarketcap: process.env.COIN_MARKET_CAP,
+  },
 };

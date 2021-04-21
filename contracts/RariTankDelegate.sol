@@ -1,25 +1,23 @@
 pragma solidity 0.7.3;
 
 /* Interfaces */
-import {RariTankStorage} from "./RariTankStorage.sol";
-import {IRariTank} from "../interfaces/IRariTank.sol";
+import {RariTankStorage} from "./tanks/RariTankStorage.sol";
+import {IRariTank} from "./interfaces/IRariTank.sol";
 
-import {IComptroller} from "../external/compound/IComptroller.sol";
-import {ICErc20} from "../external/compound/ICErc20.sol";
-import {IPriceFeed} from "../external/compound/IPriceFeed.sol";
+import {IComptroller} from "./external/compound/IComptroller.sol";
+import {ICErc20} from "./external/compound/ICErc20.sol";
+import {IPriceFeed} from "./external/compound/IPriceFeed.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IUniswapV2Router02} from "../external/uniswapv2/IUniswapV2Router.sol";
+import {IUniswapV2Router02} from "./external/uniswapv2/IUniswapV2Router.sol";
 
 /* Libraries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import {FusePoolController} from "../lib/FusePoolController.sol";
-import {RariPoolController} from "../lib/RariPoolController.sol";
-import {UniswapV2Library} from "../external/uniswapv2/UniswapV2Library.sol";
-
-import "hardhat/console.sol";
+import {FusePoolController} from "./lib/FusePoolController.sol";
+import {RariPoolController} from "./lib/RariPoolController.sol";
+import {UniswapV2Library} from "./external/uniswapv2/UniswapV2Library.sol";
 
 /* External */
 import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
@@ -89,6 +87,8 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
      * External Functions *
      ********************/
 
+    receive() external payable {}
+
     /** @dev Deposit into the Tank */
     function deposit(uint256 amount) external override {
         uint256 decimals = ERC20Upgradeable(token).decimals();
@@ -114,30 +114,13 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
             "RariTankDelegate: Withdrawal amount must be less than balance"
         );
 
+        uint256 exchangeRate = exchangeRateCurrent();
+        uint256 decimals = ERC20Upgradeable(token).decimals();
+
+        _burn(msg.sender, amount.mul(10**(36 - decimals)).div(exchangeRate));
+
         _withdraw(amount);
         IERC20(token).safeTransfer(msg.sender, amount);
-    }
-
-    /** @dev Pay Keep3r Bot */
-    function supplyKeeperPayment(uint256 amount)
-        external
-        override
-        onlyFactory
-        returns (address, uint256)
-    {
-        address[] memory path = new address[](2);
-        path[0] = token;
-        path[1] = router.WETH();
-        uint256 paymentAmount =
-            UniswapV2Library.getAmountsIn(router.factory(), amount, path)[0];
-
-        if (paymentAmount >= totalUnderlyingBalance().div(4)) {
-            paymentAmount = paymentAmount.div(10).mul(14);
-            _withdrawAndRepay(paymentAmount);
-        } else FusePoolController.withdraw(comptroller, token, paymentAmount);
-        IERC20(token).approve(factory, paymentAmount);
-
-        return (token, paymentAmount);
     }
 
     /** @dev Rebalance the pool, depositing dormant funds and handling profits */
@@ -162,6 +145,29 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
         }
 
         if (shouldRegisterProfit) _registerProfit(profit, useWeth);
+    }
+
+    /** @dev Pay Keep3r Bot */
+    function supplyKeeperPayment(uint256 amount)
+        external
+        override
+        onlyFactory
+        returns (address, uint256)
+    {
+        address[] memory path = new address[](2);
+        path[0] = token;
+        path[1] = router.WETH();
+        uint256 paymentAmount =
+            UniswapV2Library.getAmountsIn(router.factory(), amount, path)[0];
+
+        if (paymentAmount >= totalUnderlyingBalance().div(4)) {
+            paymentAmount = paymentAmount.div(10).mul(14);
+            _withdrawAndRepay(paymentAmount);
+        } else FusePoolController.withdraw(comptroller, token, paymentAmount);
+
+        IERC20(token).safeTransfer(factory, paymentAmount);
+
+        return (token, paymentAmount);
     }
 
     /*******************
@@ -342,6 +348,4 @@ contract RariTankDelegate is IRariTank, RariTankStorage, ERC20Upgradeable {
                 block.timestamp
             )[size - 1];
     }
-
-    receive() external payable {}
 }

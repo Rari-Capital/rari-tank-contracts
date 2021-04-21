@@ -1,7 +1,7 @@
 pragma solidity ^0.7.3;
 
 /* Contracts */
-import {RariTankDelegator} from "./RariTankDelegator.sol";
+import {RariTankDelegator} from "./tanks/RariTankDelegator.sol";
 
 /* Interfaces */
 import {IRariTankFactory} from "./interfaces/IRariTankFactory.sol";

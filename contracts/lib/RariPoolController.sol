@@ -23,7 +23,11 @@ library RariPoolController {
         @param erc20Contract The address of the ERC20 Contract
         @param amount The amount being deposited
     */
-    function deposit(string memory currencyCode, address erc20Contract, uint256 amount) internal {
+    function deposit(
+        string memory currencyCode,
+        address erc20Contract,
+        uint256 amount
+    ) internal {
         IERC20(erc20Contract).approve(RARI_FUND_MANAGER, amount);
         IRariFundManager(RARI_FUND_MANAGER).deposit(currencyCode, amount);
     }
