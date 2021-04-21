@@ -61,9 +61,11 @@ async function deploy() {
     tankDelegate.address
   );
 
-  const tank = (await rariTankFactory.getTanksByToken(
-    token
-  ))[0];
+  const tank = await rariTankFactory.getTank(
+    addresses.TOKEN,
+    addresses.FUSE_COMPTROLLER,
+    tankDelegate.address
+  );
 
   const oracle = await ethers.getContractAt(
     Keep3rOracleABI,

@@ -33,15 +33,6 @@ describe(`USING ${constants.TOKEN_SYMBOL}\n\nRariTankFactory`, async function ()
   describe("Tank deployment", async () => {
     it("Deploys an instance of the RariTankDelegator", async () => {
       chai.expect((await ethers.provider.getCode(rariTankDelegator)) != "0x");
-
-      await rariTankFactory
-        .deployTank(
-          constants.EXAMPLE_TOKEN,
-          constants.FUSE_COMPTROLLER,
-          constants.ROUTER,
-          tankDelegate.address
-        )
-        .should.not.be.rejectedWith("revert");
     });
 
     it("Reverts if Tanks has already been created", async () => {
@@ -62,61 +53,6 @@ describe(`USING ${constants.TOKEN_SYMBOL}\n\nRariTankFactory`, async function ()
           constants.FUSE_COMPTROLLER,
           tankDelegate.address
         )) != ethers.constants.AddressZero
-      );
-    });
-  });
-
-  describe("Delivers tank-related data correctly (1 factor)", async () => {
-    it(`Returns the one tank that uses ${constants.TOKEN_SYMBOL}`, async () => {
-      chai.expect(
-        (await rariTankFactory.getTanksByToken(constants.TOKEN)).length == 1
-      );
-    });
-
-    it("Returns both tanks that use the same Comptroller", async () => {
-      chai.expect(
-        (await rariTankFactory.getTanksByComptroller(constants.TOKEN)).length ==
-          2
-      );
-    });
-
-    it("Returns both tanks that use the same implementation", async () => {
-      chai.expect(
-        (await rariTankFactory.getTanksByImplementation(constants.TOKEN))
-          .length == 2
-      );
-    });
-  });
-
-  describe("Delivers tank-related data correct (multi-factor)", async () => {
-    it("Returns one tank, even if the comptroller is shared", async () => {
-      chai.expect(
-        (
-          await rariTankFactory.getTanksByTokenAndComptroller(
-            constants.TOKEN,
-            constants.FUSE_COMPTROLLER
-          )
-        ).length == 1
-      );
-    });
-    it("Returns one tank, even if the implementation is shared", async () => {
-      chai.expect(
-        (
-          await rariTankFactory.getTanksByTokenAndImplementation(
-            constants.TOKEN,
-            tankDelegate.address
-          )
-        ).length == 1
-      );
-    });
-    it("Returns both tanks", async () => {
-      chai.expect(
-        (
-          await rariTankFactory.getTanksByComptrollerAndImplementation(
-            constants.FUSE_COMPTROLLER,
-            tankDelegate.address
-          )
-        ).length == 2
       );
     });
   });
