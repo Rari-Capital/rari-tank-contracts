@@ -59,8 +59,10 @@ describe("Rebalances", async function () {
   });
 
   describe("Withdrawals", async () => {
-    it("Able to withdraw more than initial deposit", async () => {
+    it("Withdraw more than initial deposit, burns RTT", async () => {
+      const supplyBefore = await tank.totalSupply();
       await tank.connect(user).withdraw(constants.WITHDRAWAL_AMOUNT);
+      chai.expect((await tank.totalSupply()).gt(supplyBefore));
     });
 
     it("Reverts if withdrawal amount is too large", async () => {
