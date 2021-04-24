@@ -13,4 +13,8 @@ interface IRariTankFactory {
         address,
         address
     ) external returns (address);
+
+    function idByTank(address) external view returns (uint256);
+
+    function implementationById(uint256) external view returns (address);
 }

@@ -2,6 +2,7 @@ pragma solidity 0.7.3;
 
 /* Interfaces */
 import {RariTankStorage} from "./RariTankStorage.sol";
+import {IRariTankFactory} from "../interfaces/IRariTankFactory.sol";
 
 /**
     @title RariTankDelegator
@@ -12,8 +13,8 @@ contract RariTankDelegator is RariTankStorage {
     /*************
      * Variables *
      *************/
-    /** @dev The address of the tank implementation contract */
-    address public immutable implementation;
+    /** @dev The ID of the implementation contract */
+    uint256 public immutable implementationId;
 
     /***************
      * Constructor *
@@ -22,12 +23,16 @@ contract RariTankDelegator is RariTankStorage {
         address _token,
         address _comptroller,
         address _router,
-        address _implementation
+        uint256 _implementationId
     ) {
-        implementation = _implementation;
+        implementationId = _implementationId;
+
+        // Ideally we could use getImplementation(), however since implementationId is immutable, we cannot use it in the constructor
+        address implementation =
+            IRariTankFactory(msg.sender).implementationById(_implementationId);
 
         delegateTo(
-            _implementation,
+            implementation,
             abi.encodeWithSignature(
                 "initialize(address,address,address,address)",
                 _token,
@@ -44,7 +49,8 @@ contract RariTankDelegator is RariTankStorage {
 
     fallback() external payable {
         require(msg.value == 0, "RariTankDelegator: Cannot send funds to contract");
-        (bool success, ) = implementation.delegatecall(msg.data);
+
+        (bool success, ) = getImplementation().delegatecall(msg.data);
 
         assembly {
             let free_mem_ptr := mload(0x40)
@@ -77,5 +83,9 @@ contract RariTankDelegator is RariTankStorage {
             }
         }
         return returnData;
+    }
+
+    function getImplementation() internal view returns (address) {
+        return IRariTankFactory(factory).implementationById(implementationId);
     }
 }

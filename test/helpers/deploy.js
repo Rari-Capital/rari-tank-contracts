@@ -12,6 +12,7 @@ const [dai, token] = [addresses.DAI, addresses.TOKEN];
 const [daiHolder, tokenHolder] = [addresses.DAI_HOLDER, addresses.HOLDER];
 
 const Keep3rABI = require("../abi/Keep3r.json");
+const FactoryABI = require("../abi/Factory.json");
 const Keep3rOracleABI = require("../abi/Oracle.json");
 
 async function impersonateAccounts() {
@@ -36,15 +37,21 @@ async function deploy() {
 
   const RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   const RariTankDelegate = await ethers.getContractFactory("RariTankDelegate");
+  const FactoryDelegator = await ethers.getContractFactory("FactoryDelegator");
 
   const tankDelegate = await RariTankDelegate.deploy();
   await tankDelegate.deployed();
 
-  const rariTankFactory = await RariTankFactory.deploy(
-    addresses.FUSE_POOL_DIRECTORY
-  );
+  const factory = await RariTankFactory.deploy();
+  await factory.deployed();
 
+  let rariTankFactory = await FactoryDelegator.deploy(factory.address);
   await rariTankFactory.deployed();
+
+  rariTankFactory = await ethers.getContractAt(
+    FactoryABI,
+    rariTankFactory.address
+  );
 
   // Add the tank factory as a Keep3r job
   const governance = await ethers.provider.getSigner(
@@ -54,17 +61,18 @@ async function deploy() {
 
   keep3r.connect(governance).addJob(rariTankFactory.address);
 
+  await rariTankFactory.newImplementation(tankDelegate.address);
   await rariTankFactory.deployTank(
     token,
     addresses.FUSE_COMPTROLLER,
     addresses.ROUTER,
-    tankDelegate.address
+    1
   );
 
   const tank = await rariTankFactory.getTank(
     addresses.TOKEN,
     addresses.FUSE_COMPTROLLER,
-    tankDelegate.address
+    1
   );
 
   const oracle = await ethers.getContractAt(

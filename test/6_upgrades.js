@@ -16,10 +16,20 @@ const constants = require("./helpers/constants");
 
 const RariTankDelegatorABI = require("./abi/RariFundTank.json");
 const ERC20ABI = require("./abi/ERC20.json");
-let user, deployer;
+const CERC20ABI = require("./abi/CERC20.json");
+
+let RariTankFactory;
+let user, deployer, rebalancer;
 let rariTankFactory, tank, token, keeper;
 
-describe("User Interactions", async function () {
+async function upgradeProxy() {
+  const implementation = await RariTankFactory.deploy();
+  await implementation.deployed();
+
+  return implementation.address;
+}
+
+describe("Contract upgradeability", async function () {
   this.timeout(300000);
   before(async () => {
     user = await ethers.provider.getSigner(constants.HOLDER);
@@ -28,26 +38,20 @@ describe("User Interactions", async function () {
     [rariTankFactory, rariTankDelegator, keeper] = await contracts;
     tank = new ethers.Contract(rariTankDelegator, RariTankDelegatorABI, user);
     token = await ethers.getContractAt(ERC20ABI, constants.TOKEN);
+    [rebalancer, testing] = await ethers.getSigners();
+
+    RariTankFactory = await ethers.getContractFactory("RariTankFactory");
   });
 
-  describe("Deposits function correctly", async () => {
-    it("Accepts funds, mints the RariTankToken", async () => {
-      const depositAmount = constants.AMOUNT;
-
-      await token.connect(user).approve(rariTankDelegator, depositAmount);
-      await tank.deposit(depositAmount);
-      chai.expect((await tank.totalSupply()).gt(0));
+  describe("Upgrades are safe", async () => {
+    it("Factory can be upgraded", async () => {
+      await rariTankFactory.upgradeProxy(upgradeProxy());
     });
 
-    it("Supplies collateral to Fuse, mints cTokens", async () => {
-      const cTokenContract = await tank.cToken();
-      const cToken = await ethers.getContractAt(ERC20ABI, cTokenContract);
-      chai.expect((await cToken.balanceOf(tank.address)).gt(0));
-    });
-
-    it("Reverts if deposit amount is below 1 ETH", async () => {
-      await token.connect(user).approve(rariTankDelegator, "100000"); //Should be too small for every asset
-      await tank.deposit(10).should.be.rejectedWith("revert RariTankDelegate");
+    it("Factory data is saved", async () => {
+      const tankAddress = await rariTankFactory.tanks(0);
+      await rariTankFactory.upgradeProxy(upgradeProxy());
+      chai.expect((await rariTankFactory.tanks(0)) == tankAddress);
     });
   });
 });

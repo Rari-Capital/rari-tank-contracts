@@ -41,7 +41,7 @@ describe(`USING ${constants.TOKEN_SYMBOL}\n\nRariTankFactory`, async function ()
           constants.TOKEN,
           constants.FUSE_COMPTROLLER,
           constants.ROUTER,
-          tankDelegate.address
+          1
         )
         .should.be.rejectedWith("revert RariTankFactory");
     });
@@ -51,7 +51,7 @@ describe(`USING ${constants.TOKEN_SYMBOL}\n\nRariTankFactory`, async function ()
         (await rariTankFactory.getTank(
           token.address,
           constants.FUSE_COMPTROLLER,
-          tankDelegate.address
+          1
         )) != ethers.constants.AddressZero
       );
     });
