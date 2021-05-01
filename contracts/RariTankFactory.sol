@@ -56,26 +56,26 @@ contract RariTankFactory is FactoryStorage, Ownable {
 
     receive() external payable {}
 
+    /**********
+     * Events *
+     **********/
+    event NewTank(
+        address indexed erc20Contract,
+        address indexed comptroller,
+        uint256 indexed id
+    );
+    event NewImplementation(uint256 id, address indexed implementation);
+    event Rebalance(address indexed tank);
+    event TankUpgraded(uint256 id, address implementation);
+
     /********************
      * External Functions *
      *********************/
-
     /** @dev Rebalance the tank */
     function rebalance(address tank, bool useWeth) external keep(tank) {
         IRariTank(tank).rebalance(useWeth);
+        emit Rebalance(tank);
     }
-
-    /** 
-        @dev Emitted when a new Tank has been TankCreated
-        @param erc20Contract The Tank's underlying asset
-        @param comptroller The address of the FusePool
-        @param implementation The Tank's implementation contract address
-    */
-    event TankCreated(
-        address indexed erc20Contract,
-        address indexed comptroller,
-        address indexed implementation
-    );
 
     /** 
         @dev Deploy a new tank
@@ -90,11 +90,14 @@ contract RariTankFactory is FactoryStorage, Ownable {
         address router,
         uint256 implementationId
     ) external returns (address) {
-        // Input validation
         require(DIRECTORY.poolExists(comptroller), "RariTankFactory: Invalid FusePool");
         require(
             getTank[erc20Contract][comptroller][implementationId] == address(0),
             "RariTankFactory: Tank already exists"
+        );
+        require(
+            implementationById[implementationId] != address(0),
+            "Implementation does not exist"
         );
 
         RariTankDelegator tankContract =
@@ -104,13 +107,22 @@ contract RariTankFactory is FactoryStorage, Ownable {
         tanks.push(tank);
         getTank[erc20Contract][comptroller][implementationId] = tank;
 
+        emit NewTank(erc20Contract, comptroller, implementationId);
+
         return tank;
     }
 
     /** @dev Register a new implementation contract address */
     function newImplementation(address implementation) external onlyOwner {
+        uint256 id = idByImplementation[implementation];
+        require(id == 0, "Implementation has already been used");
+
         initialImplementations.push(implementation);
         implementationById[initialImplementations.length] = implementation;
+
+        idByImplementation[implementation] == initialImplementations.length;
+
+        emit NewImplementation(id, implementation);
     }
 
     /** @dev Upgrade a Tank implementation */
@@ -119,5 +131,11 @@ contract RariTankFactory is FactoryStorage, Ownable {
         onlyOwner
     {
         implementationById[id] = implementation;
+        emit TankUpgraded(id, implementation);
+    }
+
+    /** @dev Return an array of all Tanks */
+    function allTanks() external view returns (address[] memory) {
+        return tanks;
     }
 }

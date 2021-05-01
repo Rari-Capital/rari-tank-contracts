@@ -42,4 +42,7 @@ abstract contract FactoryStorage {
 
     /** @dev Maps the implementation ID to the implementation address */
     mapping(uint256 => address) public implementationById;
+
+    /** @dev Maps the implementation to its implementation ID */
+    mapping(address => uint256) public idByImplementation;
 }
