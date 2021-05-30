@@ -7,6 +7,6 @@
     "outDir": "dist",
     "watch": true
   },
-  "include": ["./scripts", "./test"],
-  "files": ["./hardhat.config.ts"]
+  "include": ["./scripts", "./test", "node_modules/fuse-sdk", "node_modules/fuse-sdk"],
+  "files": ["hardhat.config.js"]
 }

@@ -1,30 +1,48 @@
-pragma solidity ^0.7.0;
+pragma solidity ^0.7.3;
 
-import "../external/rari/IRariFundManager.sol";
+/* Interfaces */
+import {IRariFundManager} from "../external/rari/IRariFundManager.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+/* Libraries */
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+/**
+    @title RariPoolController
+    @author Jet Jadeja <jet@rari.capital>
+    @dev Handles interactions with the Rari Stable Pool
+*/
 library RariPoolController {
-    using SafeMath for uint256;
+    /* CONSTANTS */
+    address constant RARI_FUND_MANAGER = 0xB465BAF04C087Ce3ed1C266F96CA43f4847D9635;
 
-    address constant rariFundManager = 0xC6BF8C8A55f77686720E0a88e2Fd1fEEF58ddf4a;
-
+    /**
+        @dev Deposit into the Rari Stable Pool
+        @param currencyCode The symbol of the ERC20 Contract
+        @param erc20Contract The address of the ERC20 Contract
+        @param amount The amount being deposited
+    */
     function deposit(
         string memory currencyCode,
-        address underlying,
+        address erc20Contract,
         uint256 amount
     ) internal {
-        IERC20(underlying).approve(rariFundManager, amount);
-        IRariFundManager(rariFundManager).deposit(currencyCode, amount);
+        IERC20(erc20Contract).approve(RARI_FUND_MANAGER, amount);
+        IRariFundManager(RARI_FUND_MANAGER).deposit(currencyCode, amount);
     }
 
+    /**
+        @dev Withdraw from the Rari Stable Pool
+        @param currencyCode The symbol of the ERC20 Contract
+        @param amount The amount being withdrew
+    */
     function withdraw(string memory currencyCode, uint256 amount) internal {
-        IRariFundManager(rariFundManager).withdraw(currencyCode, amount);
+        IRariFundManager(RARI_FUND_MANAGER).withdraw(currencyCode, amount);
     }
 
-    function getUSDBalance() internal returns (uint256) {
-        return IRariFundManager(rariFundManager).balanceOf(address(this));
+    /** @return The contract's USD balance in the Rari Stable Pool, scaled by 1e18 */
+    function balanceOf() internal returns (uint256) {
+        return IRariFundManager(RARI_FUND_MANAGER).balanceOf(address(this));
     }
 }
