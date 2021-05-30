@@ -8,3 +8,4 @@ deployments
 .env
 .DS_Store
 contracts/.DS_Store
+scripts
