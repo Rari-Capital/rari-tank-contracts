@@ -3,6 +3,7 @@ pragma solidity 0.7.3;
 /** 
     @title ITank
     @author Jet Jadeja <jet@rari.capital)
+    @dev The default interface for a Tank strategy
 */
 interface ITank {
     function deposit(uint256) external;
