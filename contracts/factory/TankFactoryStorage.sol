@@ -8,6 +8,7 @@ import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface
 /**
     @title TankFactory
     @author Jet Jadeja <jet@rari.capital>
+    @dev Manages state data for the TankFactory
 */
 abstract contract TankFactoryStorage {
     /*************
