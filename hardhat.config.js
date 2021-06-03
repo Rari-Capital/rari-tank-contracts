@@ -47,10 +47,6 @@ module.exports = {
     artifacts: "./artifacts",
   },
 
-  tenderly: {
-    username: "JetDeveloping",
-    project: "tanks",
-  },
   gasReporter: {
     currency: "USD",
     gasPrice: 100,
