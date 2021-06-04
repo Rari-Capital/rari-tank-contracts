@@ -67,9 +67,12 @@ contract TankDelegator is TankStorage {
     }
   }
 
+  receive() external payable {}
+
   /********************
    * Internal Functions *
    *********************/
+  /** @dev Make a delegatecall to a certain contract and deliver the returned data  */
   function delegateTo(address callee, bytes memory data)
     internal
     returns (bytes memory)

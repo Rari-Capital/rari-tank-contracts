@@ -8,13 +8,8 @@ interface ITankFactory {
     function deployTank(
         address,
         address,
-        address,
-        address
+        uint256
     ) external;
-
+    function newImplementation(address) external returns (uint256);
     function reblanace(address) external;
-
-    function idByTank(address) external view returns (uint256);
-
-    function implementationById(uint256) external view returns (address);
 }
