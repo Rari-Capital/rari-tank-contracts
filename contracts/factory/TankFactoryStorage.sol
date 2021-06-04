@@ -5,12 +5,14 @@ import {IKeep3r} from "../external/keep3r/IKeep3r.sol";
 import {IFusePoolDirectory} from "../external/fuse/IFusePoolDirectory.sol";
 import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface.sol";
 
+import {ITankFactory} from "../interfaces/ITankFactory.sol";
+
 /**
     @title TankFactory
     @author Jet Jadeja <jet@rari.capital>
     @dev Manages state data for the TankFactory
 */
-abstract contract TankFactoryStorage {
+abstract contract TankFactoryStorage is ITankFactory {
     /*************
      * Constants *
      *************/
@@ -40,10 +42,10 @@ abstract contract TankFactoryStorage {
     mapping(address => uint256) public idByTank;
 
     /** @dev Maps the implementation ID to the implementation address */
-    mapping(uint256 => address) public implementationById;
+    mapping(uint256 => address) public override implementationById;
 
     /** @dev Maps the implementation to its implementation ID */
-    mapping(address => uint256) public idByImplementation;
+    mapping(address => uint256) public override idByImplementation;
 
     /**********
      * Events *
