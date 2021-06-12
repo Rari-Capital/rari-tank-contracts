@@ -38,6 +38,9 @@ abstract contract TankFactoryStorage is ITankFactory {
     /** @dev Array of original implementations addresses */
     address[] public initialImplementations;
 
+    /** @dev Maps implementation ID to implementation address */
+    mapping(uint256 => address) public ownerByImplementation;
+
     /** @dev Maps the address of a Tank to its id */
     mapping(address => uint256) public idByTank;
 
@@ -52,16 +55,17 @@ abstract contract TankFactoryStorage is ITankFactory {
      **********/
 
     /** @dev Emitted when a new implementation has been registered */
-    event NewImplementation(uint256 indexed id, address indexed implementation);
+    event NewImplementation(uint256 id, address implementation);
 
     /** @dev Emitted when a Tank is rebalanced */
     event Rebalance(address indexed tank);
 
     /** @dev Emitted when an implementation has been upgraded */
-    event ImplementationUpgraded(uint256 indexed id, address implementation);
+    event ImplementationUpgraded(uint256 indexed id, address indexed implementation);
 
     /** @dev Emitted when a new Tank has been created */
     event NewTank(
+        address tank,
         address indexed erc20Contract,
         address indexed comptroller,
         uint256 indexed id
