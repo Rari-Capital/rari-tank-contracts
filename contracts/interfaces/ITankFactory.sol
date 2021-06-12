@@ -9,7 +9,7 @@ interface ITankFactory {
         address,
         address,
         uint256
-    ) external;
+    ) external returns (address);
     function newImplementation(address) external returns (uint256);
     function reblanace(address) external;
 
