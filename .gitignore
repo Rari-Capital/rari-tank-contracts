@@ -12,3 +12,4 @@ tests
 .env
 
 contracts/Comments.sol
+contracts/.DS_STORE
