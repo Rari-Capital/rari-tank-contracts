@@ -23,4 +23,7 @@ abstract contract TankStorage {
 
     /** @dev Address of the FusePool Comptroller token */
     address internal comptroller;
+
+    /** @dev Initializable */
+    bool internal initalized;
 }
