@@ -1,10 +1,10 @@
 pragma solidity 0.7.3;
 
 /* Storage */
-import {TankFactoryStorage} from "./factory/TankFactoryStorage.sol";
+import {TankFactoryStorage} from "./helpers/factory/TankFactoryStorage.sol";
 
 /* Contracts */
-import {TankDelegator} from "./tanks/TankDelegator.sol";
+import {TankDelegator} from "./helpers/tanks/TankDelegator.sol";
 
 /* Interfaces */
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

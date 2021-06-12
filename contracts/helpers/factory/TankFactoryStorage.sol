@@ -1,9 +1,9 @@
 pragma solidity 0.7.3;
 
 /* Interfaces */
-import {IKeep3r} from "../external/keep3r/IKeep3r.sol";
-import {IFusePoolDirectory} from "../external/fuse/IFusePoolDirectory.sol";
-import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface.sol";
+import {IKeep3r} from "../../external/keep3r/IKeep3r.sol";
+import {IFusePoolDirectory} from "../../external/fuse/IFusePoolDirectory.sol";
+import {AggregatorV3Interface} from "../../external/chainlink/AggregatorV3Interface.sol";
 
 /**
     @title TankFactory
