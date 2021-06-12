@@ -5,14 +5,12 @@ import {IKeep3r} from "../external/keep3r/IKeep3r.sol";
 import {IFusePoolDirectory} from "../external/fuse/IFusePoolDirectory.sol";
 import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface.sol";
 
-import {ITankFactory} from "../interfaces/ITankFactory.sol";
-
 /**
     @title TankFactory
     @author Jet Jadeja <jet@rari.capital>
     @dev Manages state data for the TankFactory
 */
-abstract contract TankFactoryStorage is ITankFactory {
+abstract contract TankFactoryStorage {
     /*************
      * Constants *
      *************/
@@ -25,6 +23,9 @@ abstract contract TankFactoryStorage is ITankFactory {
     /*************
      * Variables *
      *************/
+
+    /** @dev A boolean indicating whether the registration of new Tanks are available to everyone */
+    bool public canDeploy;
 
     /** @dev An array containing all Tanks */
     address[] public tanks;
@@ -45,10 +46,10 @@ abstract contract TankFactoryStorage is ITankFactory {
     mapping(address => uint256) public idByTank;
 
     /** @dev Maps the implementation ID to the implementation address */
-    mapping(uint256 => address) public override implementationById;
+    mapping(uint256 => address) public implementationById;
 
     /** @dev Maps the implementation to its implementation ID */
-    mapping(address => uint256) public override idByImplementation;
+    mapping(address => uint256) public idByImplementation;
 
     /**********
      * Events *

@@ -6,19 +6,33 @@ import {TankFactoryStorage} from "./factory/TankFactoryStorage.sol";
 /* Contracts */
 import {TankDelegator} from "./tanks/TankDelegator.sol";
 
+/* Interfaces */
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
 /**
     @title TankFactory
     @author Jet Jadeja <jet@rari.capital>
     @dev Manages Tank deployments, new strategies, and rebalances
 */
-contract TankFactory is TankFactoryStorage {
+contract TankFactory is TankFactoryStorage, Ownable {
+    /*************
+     * Mofifiers *
+     *************/
+
+    /** @dev Checks whether anyone can call a function based on the canDeploy state variable */
+    modifier canCall() {
+        if (!canDeploy && msg.sender != owner())
+            revert("TankFactory: This function can only be called by the owner");
+        _;
+    }
+
     /********************
      * External Functions *
      *********************/
     /** @dev Register a new implementaiton contract */
     function newImplementation(address implementation)
         external
-        override
+        canCall
         returns (uint256)
     {
         require(
@@ -38,7 +52,7 @@ contract TankFactory is TankFactoryStorage {
         address token,
         address comptroller,
         uint256 implementationId
-    ) external override returns (address tank) {
+    ) external returns (address tank) {
         // Input Validation
         require(
             DIRECTORY.poolExists(comptroller),
@@ -68,5 +82,5 @@ contract TankFactory is TankFactoryStorage {
         getTank[token][comptroller][implementationId] = tank;
     }
 
-    function reblanace(address) external override {}
+    function reblanace(address) external {}
 }
