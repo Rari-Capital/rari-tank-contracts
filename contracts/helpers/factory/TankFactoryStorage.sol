@@ -2,7 +2,6 @@ pragma solidity 0.7.3;
 
 /* Interfaces */
 import {IKeep3r} from "../../external/keep3r/IKeep3r.sol";
-import {IFusePoolDirectory} from "../../external/fuse/IFusePoolDirectory.sol";
 import {AggregatorV3Interface} from "../../external/chainlink/AggregatorV3Interface.sol";
 
 /**
@@ -15,8 +14,6 @@ abstract contract TankFactoryStorage {
      * Constants *
      *************/
     IKeep3r internal constant KPR = IKeep3r(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
-    IFusePoolDirectory internal constant DIRECTORY =
-        IFusePoolDirectory(0x835482FE0532f169024d5E9410199369aAD5C77E);
     AggregatorV3Interface constant FASTGAS =
         AggregatorV3Interface(0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C);
 

@@ -54,10 +54,6 @@ contract TankFactory is TankFactoryStorage, Ownable {
         uint256 implementationId
     ) external returns (address tank) {
         // Input Validation
-        require(
-            DIRECTORY.poolExists(comptroller),
-            "TankFactory: Invalid Comptroller address"
-        );
 
         require(
             getTank[token][comptroller][implementationId] == address(0),
