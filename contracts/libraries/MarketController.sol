@@ -8,6 +8,9 @@ import {IPriceFeed} from "../external/compound/IPriceFeed.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface.sol";
 
+/* Libraries */
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+
 /**
     @title MarketController
     @author Jet Jadeja <jet@rari.capital>
@@ -15,6 +18,8 @@ import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface
     Note that this currently is setup for Fuse (and Compound)
 */
 library MarketController {
+    using SafeMath for uint256;
+
     /*************
      * Variables *
      *************/
@@ -77,9 +82,46 @@ library MarketController {
         require(cToken.repayBorrow(amount) == 0, "Tank: Failed to repay loan");
     }
 
-    /** 
-        @return the address of the CErc20 contract given the Comptroller and underliying
-    */
+    /** @return the contract's balance in underlying tokens */
+    function balanceOfUnderlying(address cErc20) internal returns (uint256) {
+        return ICErc20(cErc20).balanceOfUnderlying(address(this));
+    }
+
+    /** @return the contract's borrowing balance (accounts for interest accrued) */
+    function borrowBalanceCurrent(address comptroller, address underlying)
+        internal
+        returns (uint256)
+    {
+        return
+            getCErc20Contract(comptroller, underlying).borrowBalanceCurrent(
+                address(this)
+            );
+    }
+
+    /** @dev Get price mantissa of an asset in USDC */
+    function getPrice(address comptroller, address underlying)
+        internal
+        view
+        returns (uint256)
+    {
+        // Get price data
+        uint256 price = getPriceEth(comptroller, underlying);
+        (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
+
+        return price.mul(uint256(ethPrice)).div(1e12);
+    }
+
+    /** @dev Get the price mantissa of an asset in ETH */
+    function getPriceEth(address comptroller, address underlying)
+        internal
+        view
+        returns (uint256)
+    {
+        IPriceFeed priceFeed = IComptroller(comptroller).oracle();
+        priceFeed.getUnderlyingPrice(getCErc20Contract(comptroller, underlying));
+    }
+
+    /** @return the address of the CErc20 contract given the Comptroller and underlying asset */
     function getCErc20Contract(address comptroller, address underlying)
         internal
         view
