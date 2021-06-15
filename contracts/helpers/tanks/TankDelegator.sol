@@ -11,15 +11,6 @@ import {
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 contract TankDelegator is TankStorage, ERC20Upgradeable {
-    /*************
-     * Variables *
-     *************/
-    /** 
-        @dev The ID of the implementation contract
-        Defining it here saves gas
-    */
-    uint256 public implementationId;
-
     /***************
      * Constructor *
      ***************/

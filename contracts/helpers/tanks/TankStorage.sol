@@ -26,4 +26,7 @@ abstract contract TankStorage {
 
     /** @dev Initializable */
     bool internal initalized;
+
+    /** @dev The ID of the implementation contract */
+    uint256 public implementationId;
 }
