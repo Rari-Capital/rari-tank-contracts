@@ -2,7 +2,6 @@ pragma solidity 0.7.3;
 
 /* Storage */
 import {TankStorage} from "./TankStorage.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 
 /* Interfaces */
 import {ITankFactory} from "../../interfaces/ITankFactory.sol";
@@ -10,7 +9,7 @@ import {
     ERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-contract TankDelegator is TankStorage, ERC20Upgradeable {
+contract TankDelegator is TankStorage {
     /***************
      * Constructor *
      ***************/
@@ -19,7 +18,7 @@ contract TankDelegator is TankStorage, ERC20Upgradeable {
         address _comptroller,
         uint256 _implementationId
     ) external {
-        require(!initalized, "Tank: Initialization has already occured");
+        require(implementationId == 0, "Tank: Initialization has already occured"); // ImplementationId will always be >0
 
         implementationId = _implementationId;
         factory = msg.sender;
@@ -31,8 +30,6 @@ contract TankDelegator is TankStorage, ERC20Upgradeable {
             implementation,
             abi.encodeWithSignature("initialize(address,address)", _token, _comptroller)
         );
-
-        initalized = true;
     }
 
     /**********************

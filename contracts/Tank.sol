@@ -31,12 +31,27 @@ contract Tank is TankStorage, ERC20Upgradeable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    /*************
+     * Variables *
+     *************/
+
+    /** @dev The address of the ERC20 token that users deposit/earn yield on in the Tank */
+    address public token;
+
+    /** @dev The address of the Fuse fToken that represents the Tank's underlying balance */
+    address public cToken;
+
+    /** @dev The token that the Tank borrows and deposits into a yield source */
+    address public borrowing;
+
+    /** @dev Address of the FusePool Comptroller token */
+    address internal comptroller;
+
     /***************
      * Constructor *
      ***************/
     /** @dev Initialize the Tank contract (acts as a constructor) */
-    function initialize(address _token, address _comptroller) external {
-        require(!initalized, "Tank: Initialization has already occured");
+    function initialize(address _token, address _comptroller) external initializer {
         require(
             IFusePoolDirectory(0x835482FE0532f169024d5E9410199369aAD5C77E).poolExists(
                 comptroller
@@ -115,8 +130,12 @@ contract Tank is TankStorage, ERC20Upgradeable {
         //_withdraw(amount); // Withdraw funds from money market
     }
 
-    /** @dev Rebalance the Tank. This means rebalancing the Tank's borrow balance  */
-    function rebalance(bool useWeth) external onlyFactory {}
+    /** 
+        @dev Rebalance the Tank. This means rebalancing the Tank's borrow balance 
+    */
+    function rebalance(bool useWeth) external onlyFactory {
+        // Evaluate whether the Tank can be rebalanced
+    }
 
     /********************
      * Public Functions *
@@ -139,4 +158,13 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         return balance.mul(exchangeRate).div(10**mantissa);
     }
+
+    /********************
+     * Internal Functions *
+     *********************/
+    /** 
+        @dev Get the Tank's profits in the yield source and evaluate whether it is greater than a certain threshold
+        @param threshold The threshold for profits 
+    */
+    function _getProfits(uint256 threshold) internal returns (uint256, bool) {}
 }
