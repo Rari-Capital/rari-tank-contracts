@@ -59,25 +59,25 @@ library MarketController {
 
     /** 
         @dev Borrow from the money market
-        @param underlying is used instead of a CErc20 address because we don't store the ERC20 address for borrowed assets
+        @param token is used instead of a CErc20 address because we don't store the CERC20 address for borrowed assets
     */
     function borrow(
         address comptroller,
-        address underlying,
+        address token,
         uint256 amount
     ) internal {
-        uint256 error = getCErc20Contract(comptroller, underlying).borrow(amount);
+        uint256 error = getCErc20Contract(comptroller, token).borrow(amount);
         require(error == 0, "Tank: Failed to borrow");
     }
 
     /** @dev Repay a loan from the money market */
     function repay(
         address comptroller,
-        address underlying,
+        address token,
         uint256 amount
     ) internal {
-        ICErc20 cToken = getCErc20Contract(comptroller, underlying);
-        IERC20(underlying).approve(address(cToken), amount);
+        ICErc20 cToken = getCErc20Contract(comptroller, token);
+        IERC20(token).approve(address(cToken), amount);
 
         require(cToken.repayBorrow(amount) == 0, "Tank: Failed to repay loan");
     }
@@ -88,37 +88,60 @@ library MarketController {
     }
 
     /** @return the contract's borrowing balance (accounts for interest accrued) */
-    function borrowBalanceCurrent(address comptroller, address underlying)
+    function borrowBalanceCurrent(address comptroller, address token)
         internal
         returns (uint256)
     {
-        return
-            getCErc20Contract(comptroller, underlying).borrowBalanceCurrent(
-                address(this)
-            );
+        return getCErc20Contract(comptroller, token).borrowBalanceCurrent(address(this));
     }
 
     /** @dev Get price mantissa of an asset in USDC */
-    function getPrice(address comptroller, address underlying)
+    function getPrice(address comptroller, address token)
         internal
         view
         returns (uint256)
     {
         // Get price data
-        uint256 price = getPriceEth(comptroller, underlying);
+        uint256 price = getPriceEth(comptroller, token);
         (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
 
         return price.mul(uint256(ethPrice)).div(1e12);
     }
 
     /** @dev Get the price mantissa of an asset in ETH */
-    function getPriceEth(address comptroller, address underlying)
+    function getPriceEth(address comptroller, address token)
         internal
         view
         returns (uint256)
     {
         IPriceFeed priceFeed = IComptroller(comptroller).oracle();
-        priceFeed.getUnderlyingPrice(getCErc20Contract(comptroller, underlying));
+        priceFeed.getUnderlyingPrice(getCErc20Contract(comptroller, token));
+    }
+
+    /** 
+        @dev Convert a USD value to underlying tokens 
+        @param amount The USD amount
+    */
+    function getTokensFromUsd(
+        address comptroller,
+        address token,
+        uint256 amount
+    ) internal view returns (uint256) {
+        return amount.mul(1e18).div(getPrice(comptroller, token));
+    }
+
+    /** @dev Get the max borrow amount in USD */
+    function maxBorrowAmountUSD(
+        address cToken,
+        address comptroller,
+        address token
+    ) internal returns (uint256) {
+        (, uint256 collateralFactor) = IComptroller(comptroller).markets(cToken);
+        uint256 price = getPrice(comptroller, token);
+        uint256 balance = ICErc20(cToken).balanceOfUnderlying(address(this));
+        uint256 balanceUSD = balance.mul(price).div(1e18);
+
+        return balanceUSD.mul(collateralFactor).div(1e18);
     }
 
     /** @return the address of the CErc20 contract given the Comptroller and underlying asset */

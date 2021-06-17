@@ -17,6 +17,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /* Libraries */
 import {MarketController} from "./libraries/MarketController.sol";
+import {YieldSourceController} from "./libraries/YieldSourceController.sol";
+
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
@@ -47,6 +49,15 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Address of the FusePool Comptroller token */
     address internal comptroller;
 
+    /** @dev A value representing the ideal (percentage) used borrow limit scaled by 1e18 */
+    uint256 internal idealUsedBorrowLimit;
+
+    /** @dev Borrow balance, set whenever funds are borrowed or repaid */
+    uint256 internal lastBorrowBalance;
+
+    /** @dev Yield source Balance, set whenever funds are deposited or withdrawn */
+    uint256 internal lastYieldSourceBalance;
+
     /***************
      * Constructor *
      ***************/
@@ -64,9 +75,11 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         /* 
             Ideally, this would be a constant state variable, 
-            but since this is a proxy contract, it would be unsafe
+            but since this is a proxy contract it would be unsafe
         */
         address borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+        idealUsedBorrowLimit = 55e16; // 55%
+
         string memory borrowSymbol = ERC20Upgradeable(borrowing).symbol();
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
 
@@ -131,10 +144,11 @@ contract Tank is TankStorage, ERC20Upgradeable {
     }
 
     /** 
-        @dev Rebalance the Tank. This means rebalancing the Tank's borrow balance 
+        @dev Rebalance the Tank
+        @param useWeth Use Weth when trading between ETH and     
     */
     function rebalance(bool useWeth) external onlyFactory {
-        // Evaluate whether the Tank can be rebalanced
+        (uint256 profit, bool sufficient) = _getProfits(5e15); //0.5 percent
     }
 
     /********************
@@ -166,5 +180,44 @@ contract Tank is TankStorage, ERC20Upgradeable {
         @dev Get the Tank's profits in the yield source and evaluate whether it is greater than a certain threshold
         @param threshold The threshold for profits 
     */
-    function _getProfits(uint256 threshold) internal returns (uint256, bool) {}
+    function _getProfits(uint256 threshold)
+        internal
+        returns (uint256 profit, bool sufficient)
+    {
+        profit = YieldSourceController.balanceOf().sub(lastYieldSourceBalance);
+        uint256 thresholdValue = lastYieldSourceBalance.mul(threshold).div(1e18);
+        sufficient = profit > thresholdValue;
+    }
+
+    /** 
+        @dev Get the borrow balance divergence 
+        @return divergence the divergence
+        @return idealGreater a boolean indicating whether the ideal balance is greater than the current one 
+    */
+    function _getBorrowBalanceDivergence(uint256 threshold)
+        internal
+        returns (
+            uint256 divergence,
+            bool idealGreater,
+            bool divergenceSufficient
+        )
+    {
+        uint256 idealBorrowAmount = _getIdealBorrowAmount();
+
+        idealGreater = idealBorrowAmount > lastBorrowBalance;
+        divergence = idealGreater ? idealBorrowAmount - lastBorrowBalance : !idealGreater
+            ? lastBorrowBalance - idealBorrowAmount
+            : 0;
+
+        uint256 borrowThreshold = lastBorrowBalance.mul(threshold).div(1e18);
+        divergenceSufficient = divergence > borrowThreshold;
+    }
+
+    /** @return the ideal borrow amount */
+    function _getIdealBorrowAmount() internal returns (uint256) {
+        uint256 usdBorrowAmount =
+            MarketController.maxBorrowAmountUSD(cToken, comptroller, token);
+
+        return MarketController.getTokensFromUsd(comptroller, token, usdBorrowAmount);
+    }
 }
