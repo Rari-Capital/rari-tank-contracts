@@ -148,7 +148,17 @@ contract Tank is TankStorage, ERC20Upgradeable {
         @param useWeth Use Weth when trading between ETH and     
     */
     function rebalance(bool useWeth) external onlyFactory {
-        (uint256 profit, bool sufficient) = _getProfits(5e15); //0.5 percent
+        (uint256 profit, bool profitSufficient) = _getProfits(5e15); //0.5 percent
+        (uint256 divergence, bool idealGreater, bool divergenceSufficient) =
+            _getBorrowBalanceDivergence(15e16); //15%
+
+        require(divergenceSufficient || profitSufficient, "Tank: Cannot be rebalanced");
+        bool registerProfits = profit > (lastYieldSourceBalance * 5e15) / 1e18; //0.5%
+
+        if (divergenceSufficient) {
+            if (idealGreater) _borrow(divergence, registerProfits ? profit : 0);
+            else _repay(divergence, registerProfits ? profit : 0);
+        }
     }
 
     /********************
@@ -211,6 +221,24 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         uint256 borrowThreshold = lastBorrowBalance.mul(threshold).div(1e18);
         divergenceSufficient = divergence > borrowThreshold;
+    }
+
+    /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
+    function _borrow(uint256 borrowAmount, uint256 depositAmount) internal {
+        MarketController.borrow(comptroller, borrowing, borrowAmount);
+        lastBorrowBalance += borrowAmount;
+
+        YieldSourceController.deposit(borrowing, borrowAmount - depositAmount);
+        lastYieldSourceBalance += borrowAmount - depositAmount;
+    }
+
+    /** @dev Withdraw a stable asset from Rari and repay */
+    function _repay(uint256 withdrawalAmount, uint256 repayAmount) internal {
+        YieldSourceController.withdraw(withdrawalAmount);
+        lastYieldSourceBalance -= withdrawalAmount;
+
+        MarketController.repay(comptroller, borrowing, withdrawalAmount - repayAmount);
+        lastBorrowBalance -= (withdrawalAmount - repayAmount);
     }
 
     /** @return the ideal borrow amount */
