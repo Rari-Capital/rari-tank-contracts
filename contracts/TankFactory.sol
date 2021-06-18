@@ -61,17 +61,16 @@ contract TankFactory is TankFactoryStorage, Ownable {
 
         bytes memory bytecode = type(TankDelegator).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(data, implementationId));
-
         TankDelegator tank = new TankDelegator{salt: salt}(implementationId, data);
 
-        //assembly {
-        //     tank := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        // }
-
         emit NewTank(address(tank), data, implementationId);
-
         tanks.push(address(tank));
     }
 
+    /** @dev  */
     function reblanace(address) external {}
+
+    function getTanks() external view returns (address[] memory) {
+        return tanks;
+    }
 }
