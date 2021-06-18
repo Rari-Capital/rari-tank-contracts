@@ -27,12 +27,6 @@ abstract contract TankFactoryStorage {
     /** @dev An array containing all Tanks */
     address[] public tanks;
 
-    /** 
-        @dev Maps the token to a map from Comptroller to a map from implementation id to tank
-        (token => (comptroller => (id => tank)))
-    */
-    mapping(address => mapping(address => mapping(uint256 => address))) public getTank;
-
     /** @dev Array of original implementations addresses */
     address[] public initialImplementations;
 
@@ -62,10 +56,5 @@ abstract contract TankFactoryStorage {
     event ImplementationUpgraded(uint256 indexed id, address indexed implementation);
 
     /** @dev Emitted when a new Tank has been created */
-    event NewTank(
-        address tank,
-        address indexed erc20Contract,
-        address indexed comptroller,
-        uint256 indexed id
-    );
+    event NewTank(address tank, bytes indexed input, uint256 indexed id);
 }
