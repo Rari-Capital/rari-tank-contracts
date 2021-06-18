@@ -5,7 +5,7 @@ import { Contract, ContractFactory } from "@ethersproject/contracts";
 import FactoryAbi from "./abi/Factory.json";
 import TankAbi from "./abi/RariFundTank.json";
 
-const dai = addresses.DAI;
+const borrowing = addresses.BORROWING;
 const token = addresses.TOKEN;
 
 export default async function deploy(): Promise<Contract[]> {
@@ -37,7 +37,7 @@ export default async function deploy(): Promise<Contract[]> {
 async function impersonateAccounts() {
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: [dai.HOLDER],
+    params: [borrowing.HOLDER],
   });
 
   await hre.network.provider.request({
