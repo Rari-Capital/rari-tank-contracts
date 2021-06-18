@@ -2,14 +2,14 @@ import addresses from "./constants";
 import hre, { ethers } from "hardhat";
 import { Contract, ContractFactory } from "@ethersproject/contracts";
 
-import { default as Erc20Abi } from "./abi/ERC20.json";
+import Erc20Abi from "./abi/ERC20.json";
 import FactoryAbi from "./abi/Factory.json";
-import { default as TankAbi } from "./abi/RariFundTank.json";
+import TankAbi from "./abi/RariFundTank.json";
 
 const dai = addresses.DAI;
 const token = addresses.TOKEN;
 
-export default async function deploy() {
+export default async function deploy(): Promise<Contract[]> {
   await impersonateAccounts();
 
   const implementation = await deployContract("Tank", []);
@@ -29,9 +29,10 @@ export default async function deploy() {
     ["address", "address"],
     [token.ADDRESS, addresses.FUSE_COMPTROLLER]
   );
-  console.log(parameters);
 
-  await factory.deployTank(1, `0x${parameters}`);
+  //await factory.deployTank(1, `0x${parameters}`);
+  const tank = await deployTank(factory, 1, parameters);
+  return [factory, tank];
 }
 
 async function impersonateAccounts() {
@@ -48,11 +49,22 @@ async function impersonateAccounts() {
 
 async function deployContract(name: string, args: any): Promise<Contract> {
   const factory = await ethers.getContractFactory(name);
-
   const contract = await factory.deploy(...args);
   await contract.deployed();
 
   return contract;
+}
+
+async function deployTank(
+  factory: Contract,
+  implementation: Number,
+  parameters: String
+): Promise<Contract> {
+  await factory.deployTank(implementation, `0x${parameters}`);
+  const tanks = await factory.getTanks();
+  const tank = tanks[tanks.length - 1];
+
+  return ethers.getContractAt(TankAbi, tank);
 }
 
 async function encodeArgs(types: string[], values: any[]) {
