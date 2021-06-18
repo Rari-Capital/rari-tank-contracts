@@ -1,8 +1,8 @@
-/**
+/*
  * Tests for the TankFactory
  */
 
-import deploy, { deployTank, encodeArgs } from "./helpers/deploy";
+import deploy, { deployTank, encodeArgs } from "./helpers/utils";
 import { Contract } from "@ethersproject/contracts";
 
 import chai, { expect } from "chai";
@@ -12,7 +12,7 @@ chai.use(chaiAsPromised);
 chai.should();
 
 import addresses from "./helpers/constants";
-const [dai, token] = [addresses.DAI, addresses.TOKEN];
+const [borrowing, token] = [addresses.BORROWING, addresses.TOKEN];
 
 describe("TankFactory", async function () {
   let factory: Contract, tank: Contract;
@@ -33,7 +33,7 @@ describe("TankFactory", async function () {
     it("Allows you to deploy new Tank", async () => {
       const parameters: String = await encodeArgs(
         ["address", "address"],
-        [dai.ADDRESS, addresses.FUSE_COMPTROLLER]
+        [borrowing.ADDRESS, addresses.FUSE_COMPTROLLER]
       );
 
       await deployTank(factory, 1, parameters); // Deploy a Tank that uses DAI as collateral
@@ -45,16 +45,16 @@ describe("TankFactory", async function () {
     it("Does not allow you to deploy a Tank with the same input", async () => {
       const parameters: String = await encodeArgs(
         ["address", "address"],
-        [dai.ADDRESS, addresses.FUSE_COMPTROLLER]
+        [borrowing.ADDRESS, addresses.FUSE_COMPTROLLER]
       );
 
       await deployTank(factory, 1, parameters).should.be.revertedWith("revert");
     });
 
-    it("Requires valid Comptroller", async () => {
+    it("Requires valid comptroller", async () => {
       const parameters: String = await encodeArgs(
         ["address", "address"],
-        [dai.ADDRESS, addresses.EXAMPLE_ADDRESS] // Example Address is not a Comptroller
+        [borrowing.ADDRESS, addresses.EXAMPLE_ADDRESS] // Example Address is not a Comptroller
       );
 
       await deployTank(factory, 1, parameters).should.be.revertedWith("revert");

@@ -50,7 +50,7 @@ export default {
     USE_WETH: token.useWeth,
   },
 
-  DAI: {
+  BORROWING: {
     ADDRESS: "0x6b175474e89094c44da98b954eedeac495271d0f",
     HOLDER: "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c",
   },
