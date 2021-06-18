@@ -48,17 +48,11 @@ contract TankFactory is TankFactoryStorage, Ownable {
     }
 
     /** @dev Deploy a new Tank contract */
-    function deployTank(
-        address token,
-        address comptroller,
-        uint256 implementationId
-    ) external returns (address tank) {
+    function deployTank(uint256 implementationId, bytes memory data)
+        external
+        returns (address)
+    {
         // Input Validation
-
-        require(
-            getTank[token][comptroller][implementationId] == address(0),
-            "TankFactory: Tank already exists"
-        );
 
         require(
             implementationById[implementationId] != address(0),
@@ -66,16 +60,17 @@ contract TankFactory is TankFactoryStorage, Ownable {
         );
 
         bytes memory bytecode = type(TankDelegator).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(token, comptroller, implementationId));
+        bytes32 salt = keccak256(abi.encodePacked(data, implementationId));
 
-        assembly {
-            tank := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
+        TankDelegator tank = new TankDelegator{salt: salt}(implementationId, data);
 
-        emit NewTank(tank, token, comptroller, implementationId);
+        //assembly {
+        //     tank := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        // }
 
-        tanks.push(tank);
-        getTank[token][comptroller][implementationId] = tank;
+        emit NewTank(address(tank), data, implementationId);
+
+        tanks.push(address(tank));
     }
 
     function reblanace(address) external {}
