@@ -13,23 +13,14 @@ contract TankDelegator is TankStorage {
     /***************
      * Constructor *
      ***************/
-    function initialize(
-        address _token,
-        address _comptroller,
-        uint256 _implementationId
-    ) external {
-        require(implementationId == 0, "Tank: Initialization has already occured"); // ImplementationId will always be >0
-
+    constructor(uint256 _implementationId, bytes memory data) {
         implementationId = _implementationId;
         factory = msg.sender;
 
         address implementation =
             ITankFactory(msg.sender).implementationById(_implementationId);
 
-        delegateTo(
-            implementation,
-            abi.encodeWithSignature("initialize(address,address)", _token, _comptroller)
-        );
+        delegateTo(implementation, abi.encodeWithSignature("initialize(bytes)", data));
     }
 
     /**********************
