@@ -62,7 +62,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Constructor *
      ***************/
     /** @dev Initialize the Tank contract (acts as a constructor) */
-    function initialize(address _token, address _comptroller) external initializer {
+    function initialize(bytes memory data) external initializer {
+        (address _token, address _comptroller) = abi.decode(data, (address, address));
         require(
             IFusePoolDirectory(0x835482FE0532f169024d5E9410199369aAD5C77E).poolExists(
                 comptroller
@@ -77,7 +78,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
             Ideally, this would be a constant state variable, 
             but since this is a proxy contract it would be unsafe
         */
-        address borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+        borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         idealUsedBorrowLimit = 55e16; // 55%
 
         string memory borrowSymbol = ERC20Upgradeable(borrowing).symbol();
@@ -186,6 +187,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /********************
      * Internal Functions *
      *********************/
+
+    function _registerProfit() internal {}
+
     /** 
         @dev Get the Tank's profits in the yield source and evaluate whether it is greater than a certain threshold
         @param threshold The threshold for profits 
