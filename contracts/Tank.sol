@@ -64,9 +64,10 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Initialize the Tank contract (acts as a constructor) */
     function initialize(bytes memory data) external initializer {
         (address _token, address _comptroller) = abi.decode(data, (address, address));
+
         require(
             IFusePoolDirectory(0x835482FE0532f169024d5E9410199369aAD5C77E).poolExists(
-                comptroller
+                _comptroller
             ),
             "TankFactory: Invalid Comptroller address"
         );
