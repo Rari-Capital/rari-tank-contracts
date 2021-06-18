@@ -2,7 +2,6 @@ import addresses from "./constants";
 import hre, { ethers } from "hardhat";
 import { Contract, ContractFactory } from "@ethersproject/contracts";
 
-import Erc20Abi from "./abi/ERC20.json";
 import FactoryAbi from "./abi/Factory.json";
 import TankAbi from "./abi/RariFundTank.json";
 
@@ -47,7 +46,10 @@ async function impersonateAccounts() {
   });
 }
 
-async function deployContract(name: string, args: any): Promise<Contract> {
+export async function deployContract(
+  name: string,
+  args: any
+): Promise<Contract> {
   const factory = await ethers.getContractFactory(name);
   const contract = await factory.deploy(...args);
   await contract.deployed();
@@ -55,7 +57,7 @@ async function deployContract(name: string, args: any): Promise<Contract> {
   return contract;
 }
 
-async function deployTank(
+export async function deployTank(
   factory: Contract,
   implementation: Number,
   parameters: String
@@ -67,7 +69,7 @@ async function deployTank(
   return ethers.getContractAt(TankAbi, tank);
 }
 
-async function encodeArgs(types: string[], values: any[]) {
+export async function encodeArgs(types: string[], values: any[]) {
   const abiCoder = new ethers.utils.AbiCoder();
 
   return abiCoder.encode(types, values).replace(/^(0x)/, "");
