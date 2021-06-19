@@ -1,3 +1,6 @@
+import { ethers } from "hardhat";
+import Erc20Abi from "./abi/ERC20.json";
+
 const tokens = [
   {
     symbol: "WBTC",
@@ -41,8 +44,10 @@ const token = tokens[Math.floor(Math.random() * tokens.length)];
 
 export default {
   TOKEN: {
+    CONTRACT: ethers.getContractAt(Erc20Abi, token.address),
     ADDRESS: token.address,
     SYMBOL: token.symbol,
+    SIGNER: ethers.provider.getSigner(token.holder),
     HOLDER: token.holder,
     AMOUNT: token.depositAmount,
     WITHDRAWAL_AMOUNT: token.withdrawalAmount,
@@ -53,6 +58,13 @@ export default {
   BORROWING: {
     ADDRESS: "0x6b175474e89094c44da98b954eedeac495271d0f",
     HOLDER: "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c",
+    HOLDER_SIGNER: ethers.provider.getSigner(
+      "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c"
+    ),
+    CONTRACT: ethers.getContractAt(
+      Erc20Abi,
+      "0x6b175474e89094c44da98b954eedeac495271d0f"
+    ),
   },
 
   RSPT: "0x0833cfcb11A5ba89FbAF73a407831c98aD2D7648",

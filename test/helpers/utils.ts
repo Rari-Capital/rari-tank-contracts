@@ -4,6 +4,8 @@ import { Contract, ContractFactory } from "@ethersproject/contracts";
 
 import FactoryAbi from "./abi/Factory.json";
 import TankAbi from "./abi/RariFundTank.json";
+import Erc20Abi from "./abi/ERC20.json";
+import CErc20 from "./abi/CERC20.json";
 
 const borrowing = addresses.BORROWING;
 const token = addresses.TOKEN;
@@ -34,18 +36,6 @@ export default async function deploy(): Promise<Contract[]> {
   return [factory, tank];
 }
 
-async function impersonateAccounts() {
-  await hre.network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: [borrowing.HOLDER],
-  });
-
-  await hre.network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: [token.HOLDER],
-  });
-}
-
 export async function deployContract(
   name: string,
   args: any
@@ -69,8 +59,30 @@ export async function deployTank(
   return ethers.getContractAt(TankAbi, tank);
 }
 
+export async function supplyToFuse(cToken: string, signer: any, amount: any) {
+  const contract = await ethers.getContractAt(CErc20, cToken);
+
+  await (await ethers.getContractAt(Erc20Abi, await contract.underlying()))
+    .connect(signer)
+    .approve(cToken, amount);
+
+  await contract.connect(signer).mint(amount);
+}
+
 export async function encodeArgs(types: string[], values: any[]) {
   const abiCoder = new ethers.utils.AbiCoder();
 
   return abiCoder.encode(types, values).replace(/^(0x)/, "");
+}
+
+export async function impersonateAccount(account: String) {
+  await hre.network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [account],
+  });
+}
+
+async function impersonateAccounts() {
+  await impersonateAccount(token.HOLDER);
+  await impersonateAccount(borrowing.HOLDER);
 }
