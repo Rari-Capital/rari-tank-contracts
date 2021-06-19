@@ -11,6 +11,8 @@ import {AggregatorV3Interface} from "../external/chainlink/AggregatorV3Interface
 /* Libraries */
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "hardhat/console.sol";
+
 /**
     @title MarketController
     @author Jet Jadeja <jet@rari.capital>
@@ -115,7 +117,7 @@ library MarketController {
         returns (uint256)
     {
         IPriceFeed priceFeed = IComptroller(comptroller).oracle();
-        priceFeed.getUnderlyingPrice(getCErc20Contract(comptroller, token));
+        return priceFeed.getUnderlyingPrice(getCErc20Contract(comptroller, token));
     }
 
     /** 
