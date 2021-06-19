@@ -12,7 +12,7 @@ chai.use(chaiAsPromised);
 chai.should();
 
 import addresses from "./helpers/constants";
-const [borrowing, token] = [addresses.BORROWING, addresses.TOKEN];
+const borrowing = addresses.BORROWING;
 
 describe("TankFactory", async function () {
   let factory: Contract, tank: Contract;
