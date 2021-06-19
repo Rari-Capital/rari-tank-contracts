@@ -119,13 +119,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
         uint256 price = MarketController.getPriceEth(comptroller, token);
 
         uint256 deposited = price.mul(amount).div(1e18); //The deposited amount in ETH
-        console.log(
-            price.div(10**priceMantissa).mul(amount).div(
-                10**ERC20Upgradeable(token).decimals()
-            )
-        );
 
         require(deposited >= 1e18, "Tank: Amount must be worth at least one Ether");
+
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         MarketController.supply(cToken, amount); // Deposit into Fuse
 
@@ -173,7 +169,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         uint256 balance = MarketController.balanceOfUnderlying(cToken) * (10**mantissa);
 
         if (balance == 0 || totalSupply == 0) return 1e18;
-        return balance.mul(1e18).div(balance);
+        return balance.mul(1e18).div(totalSupply);
     }
 
     /** @dev Get a user's balance of underlying tokens */
