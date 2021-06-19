@@ -14,6 +14,7 @@ import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
 //prettier-ignore
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IUniswapV2Router02} from "./external/uniswapv2/IUniswapV2Router.sol";
 
 /* Libraries */
 import {MarketController} from "./libraries/MarketController.sol";
@@ -58,6 +59,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Yield source Balance, set whenever funds are deposited or withdrawn */
     uint256 internal lastYieldSourceBalance;
 
+    /** @dev The address for the WETH contract */
+    address internal WETH;
+
     /***************
      * Constructor *
      ***************/
@@ -80,6 +84,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
             but since this is a proxy contract it would be unsafe
         */
         borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+        WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         idealUsedBorrowLimit = 55e16; // 55%
 
         string memory borrowSymbol = ERC20Upgradeable(borrowing).symbol();
@@ -157,6 +162,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
             if (idealGreater) _borrow(divergence, registerProfits ? profit : 0);
             else _repay(divergence, registerProfits ? profit : 0);
         }
+
+        _takeProfit(profit, useWeth);
     }
 
     /********************
@@ -185,7 +192,47 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Internal Functions *
      *********************/
 
-    function _registerProfit() internal {}
+    function _takeProfit(uint256 profit, bool useWeth) internal {
+        uint256 borrowBalance = MarketController.borrowBalanceCurrent(comptroller, token);
+        uint256 debt =
+            borrowBalance > lastBorrowBalance ? borrowBalance - lastBorrowBalance : 0;
+
+        YieldSourceController.withdraw(profit);
+        lastYieldSourceBalance = YieldSourceController.balanceOf();
+
+        if (debt >= profit) {
+            MarketController.repay(comptroller, borrowing, profit);
+            return;
+        }
+
+        if (debt > 0) MarketController.repay(comptroller, borrowing, debt);
+
+        _swapProfit(useWeth, profit - debt);
+    }
+
+    function _swapProfit(bool useWeth, uint256 amount) internal returns (uint256) {
+        address[] memory path = new address[](useWeth ? 3 : 2);
+        path[0] = borrowing;
+
+        if (useWeth) {
+            path[1] = WETH;
+            path[2] = token;
+        } else {
+            path[1] = token;
+        }
+
+        address router = _getRouter(path, amount);
+        IERC20(borrowing).approve(address(router), amount);
+
+        return
+            IUniswapV2Router02(router).swapExactTokensForTokens(
+                amount,
+                0,
+                path,
+                address(this),
+                block.timestamp
+            )[useWeth ? 2 : 1];
+    }
 
     /** 
         @dev Get the Tank's profits in the yield source and evaluate whether it is greater than a certain threshold
@@ -248,5 +295,14 @@ contract Tank is TankStorage, ERC20Upgradeable {
             MarketController.maxBorrowAmountUSD(cToken, comptroller, token);
 
         return MarketController.getTokensFromUsd(comptroller, token, usdBorrowAmount);
+    }
+
+    /** @dev Identify the best market to swap on */
+    function _getRouter(address[] memory path, uint256 amount)
+        internal
+        returns (address)
+    {
+        //TODO: Add evaluation code
+        return 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     }
 }
