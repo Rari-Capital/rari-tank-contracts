@@ -5,7 +5,7 @@ import { Contract, ContractFactory } from "@ethersproject/contracts";
 import FactoryAbi from "./abi/Factory.json";
 import TankAbi from "./abi/RariFundTank.json";
 import Erc20Abi from "./abi/ERC20.json";
-import CErc20 from "./abi/CERC20.json";
+import CErc20Abi from "./abi/CERC20.json";
 
 const borrowing = addresses.BORROWING;
 const token = addresses.TOKEN;
@@ -62,7 +62,7 @@ export async function deployTank(
 }
 
 export async function supplyToFuse(cToken: string, signer: any, amount: any) {
-  const contract = await ethers.getContractAt(CErc20, cToken);
+  const contract = await ethers.getContractAt(CErc20Abi, cToken);
 
   await (await ethers.getContractAt(Erc20Abi, await contract.underlying()))
     .connect(signer)
@@ -75,6 +75,10 @@ export async function encodeArgs(types: string[], values: any[]) {
   const abiCoder = new ethers.utils.AbiCoder();
 
   return abiCoder.encode(types, values).replace(/^(0x)/, "");
+}
+
+export async function getCToken(tank: Contract): Promise<Contract> {
+  return ethers.getContractAt(CErc20Abi, await tank.cToken());
 }
 
 export async function impersonateAccount(account: String) {
