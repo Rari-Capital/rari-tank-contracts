@@ -109,9 +109,11 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Mofifiers *
      *************/
 
-    modifier onlyFactory() {
-        require(msg.sender == factory, "Tank: Can only be called by the factory");
+    /** @dev  */
+    modifier pay() {
+        uint256 gas = gasleft();
         _;
+        uint256 used = gas - gasleft();
     }
 
     /********************
@@ -119,8 +121,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
      *********************/
     /** @dev Deposit into the Tank */
     function deposit(uint256 amount) external {
+        require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
+
         uint256 decimals = ERC20Upgradeable(token).decimals();
-        uint256 priceMantissa = 18 - decimals;
         uint256 price = MarketController.getPriceEth(comptroller, token);
 
         uint256 deposited = price.mul(amount).div(1e18); //The deposited amount in ETH
@@ -129,6 +132,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         MarketController.supply(cToken, amount); // Deposit into Fuse
+        MarketController.enterMarkets(cToken, comptroller);
 
         uint256 exchangeRate = exchangeRateCurrent();
         _mint(msg.sender, amount.mul(exchangeRate).div(10**decimals));
@@ -136,6 +140,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
     /** @dev Deposit devs into the Tanks */
     function withdraw(uint256 amount) external {
+        require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
+
         uint256 balance = balanceOfUnderlying(msg.sender);
         require(amount <= balance, "Tank: Amount must be less than balance");
 
@@ -150,20 +156,22 @@ contract Tank is TankStorage, ERC20Upgradeable {
         @dev Rebalance the Tank
         @param useWeth Use Weth when trading between ETH and     
     */
-    function rebalance(bool useWeth) external onlyFactory {
-        (uint256 profit, bool profitSufficient) = _getProfits(5e15); //0.5 percent
+    function rebalance(bool useWeth) external pay {
+        require(msg.sender == tx.origin, "Tank: Can only be called by an EOA"); // Require that only a contract can call this
+
+        (uint256 profit, bool profitSufficient) = getProfit(5e15); //0.5 percent
         (uint256 divergence, bool idealGreater, bool divergenceSufficient) =
-            _getBorrowBalanceDivergence(15e16); //15%
+            getBorrowBalanceDivergence(15e16); //15%
 
         require(divergenceSufficient || profitSufficient, "Tank: Cannot be rebalanced");
         bool registerProfits = profit > (lastYieldSourceBalance * 5e15) / 1e18; //0.5%
 
         if (divergenceSufficient) {
-            if (idealGreater) _borrow(divergence, registerProfits ? profit : 0);
-            else _repay(divergence, registerProfits ? profit : 0);
+            if (idealGreater) borrow(divergence, registerProfits ? profit : 0);
+            else repay(divergence, registerProfits ? profit : 0);
         }
 
-        _takeProfit(profit, useWeth);
+        if (profitSufficient) takeProfit(profit, useWeth);
     }
 
     /********************
@@ -191,8 +199,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /********************
      * Internal Functions *
      *********************/
-
-    function _takeProfit(uint256 profit, bool useWeth) internal {
+    /** @dev Withdraw from the YSC, repay debts, and swap profits */
+    function takeProfit(uint256 profit, bool useWeth) internal {
         uint256 borrowBalance = MarketController.borrowBalanceCurrent(comptroller, token);
         uint256 debt =
             borrowBalance > lastBorrowBalance ? borrowBalance - lastBorrowBalance : 0;
@@ -203,14 +211,14 @@ contract Tank is TankStorage, ERC20Upgradeable {
         if (debt >= profit) {
             MarketController.repay(comptroller, borrowing, profit);
             return;
-        }
+        } else if (profit > debt && debt > 0)
+            MarketController.repay(comptroller, borrowing, debt);
 
-        if (debt > 0) MarketController.repay(comptroller, borrowing, debt);
-
-        _swapProfit(useWeth, profit - debt);
+        MarketController.supply(cToken, swapProfit(useWeth, profit - debt));
     }
 
-    function _swapProfit(bool useWeth, uint256 amount) internal returns (uint256) {
+    /** @dev Swap profits from the borrowed asset to the supplied asset */
+    function swapProfit(bool useWeth, uint256 amount) internal returns (uint256) {
         address[] memory path = new address[](useWeth ? 3 : 2);
         path[0] = borrowing;
 
@@ -238,7 +246,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         @dev Get the Tank's profits in the yield source and evaluate whether it is greater than a certain threshold
         @param threshold The threshold for profits 
     */
-    function _getProfits(uint256 threshold)
+    function getProfit(uint256 threshold)
         internal
         returns (uint256 profit, bool sufficient)
     {
@@ -252,7 +260,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         @return divergence the divergence
         @return idealGreater a boolean indicating whether the ideal balance is greater than the current one 
     */
-    function _getBorrowBalanceDivergence(uint256 threshold)
+    function getBorrowBalanceDivergence(uint256 threshold)
         internal
         returns (
             uint256 divergence,
@@ -260,8 +268,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
             bool divergenceSufficient
         )
     {
-        uint256 idealBorrowAmount = _getIdealBorrowAmount();
-
+        uint256 idealBorrowAmount = getIdealBorrowAmount();
         idealGreater = idealBorrowAmount > lastBorrowBalance;
         divergence = idealGreater ? idealBorrowAmount - lastBorrowBalance : !idealGreater
             ? lastBorrowBalance - idealBorrowAmount
@@ -272,7 +279,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
     }
 
     /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
-    function _borrow(uint256 borrowAmount, uint256 depositAmount) internal {
+    function borrow(uint256 borrowAmount, uint256 depositAmount) internal {
         MarketController.borrow(comptroller, borrowing, borrowAmount);
         lastBorrowBalance += borrowAmount;
 
@@ -281,7 +288,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
     }
 
     /** @dev Withdraw a stable asset from Rari and repay */
-    function _repay(uint256 withdrawalAmount, uint256 repayAmount) internal {
+    function repay(uint256 withdrawalAmount, uint256 repayAmount) internal {
         YieldSourceController.withdraw(withdrawalAmount);
         lastYieldSourceBalance -= withdrawalAmount;
 
@@ -290,11 +297,15 @@ contract Tank is TankStorage, ERC20Upgradeable {
     }
 
     /** @return the ideal borrow amount */
-    function _getIdealBorrowAmount() internal returns (uint256) {
+    function getIdealBorrowAmount() internal returns (uint256) {
         uint256 usdBorrowAmount =
             MarketController.maxBorrowAmountUSD(cToken, comptroller, token);
 
-        return MarketController.getTokensFromUsd(comptroller, token, usdBorrowAmount);
+        return
+            MarketController
+                .getTokensFromUsd(comptroller, borrowing, usdBorrowAmount)
+                .mul(idealUsedBorrowLimit)
+                .div(1e18);
     }
 
     /** @dev Identify the best market to swap on */
