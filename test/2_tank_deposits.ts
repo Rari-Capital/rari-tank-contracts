@@ -18,7 +18,7 @@ import Erc20Abi from "./helpers/abi/ERC20.json";
 
 const [token] = [addresses.TOKEN];
 
-describe("Tanks", async function () {
+describe("Deposits", async function () {
   let factory: Contract, tank: Contract;
   this.timeout(300000); // Set new timeout
 
@@ -42,7 +42,9 @@ describe("Tanks", async function () {
         Math.round((await tank.balanceOf(token.HOLDER)) / 10 ** 18)
       ).is.equal(Math.round(parseInt(token.AMOUNT) / 10 ** decimals));
     });
+  });
 
+  describe("Balances", async () => {
     it("Tank tokens increase in value if the Tank accumulates more tokens", async () => {
       const balanceBefore = await tank.callStatic.balanceOfUnderlying(
         token.HOLDER
@@ -72,15 +74,6 @@ describe("Tanks", async function () {
       const cToken: Contract = await ethers.getContractAt(Erc20Abi, address);
 
       expect(parseInt(await cToken.balanceOf(tank.address))).is.greaterThan(0);
-    });
-  });
-
-  describe("Withrawals", async () => {
-    it("Burns Tank tokens", async () => {
-      // const balanceBefore = await tank.callStatic.balanceOf(token.HOLDER);
-      // await tank.connect(token.SIGNER).withdraw(token.AMOUNT);
-      // const balanceAfter = await tank.callStatic.balanceOf(token.HOLDER);
-      // expect(parseInt(balanceBefore)).is.greaterThan(parseInt(balanceAfter));
     });
   });
 });
