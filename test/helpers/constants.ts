@@ -2,15 +2,15 @@ import { ethers } from "hardhat";
 import Erc20Abi from "./abi/ERC20.json";
 
 const tokens = [
-  {
-    symbol: "WBTC",
-    address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-    holder: "0x0C4809bE72F9E117D75381438c5dAeC8AbE75BaD",
-    depositAmount: "100000000",
-    withdrawalAmount: "100000500",
-    largeWithdrawalAmount: "200000500",
-    useWeth: false,
-  },
+  // {
+  //   symbol: "WBTC",
+  //   address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+  //   holder: "0x0C4809bE72F9E117D75381438c5dAeC8AbE75BaD",
+  //   depositAmount: "100000000",
+  //   withdrawalAmount: "100000500",
+  //   largeWithdrawalAmount: "200000500",
+  //   useWeth: false,
+  // },
   {
     symbol: "USDC",
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -20,24 +20,24 @@ const tokens = [
     largeWithdrawalAmount: "100000000000",
     useWeth: false,
   },
-  {
-    symbol: "RGT",
-    address: "0xD291E7a03283640FDc51b121aC401383A46cC623",
-    holder: "0xC1d1B12bCE4a73310F268d49EFAB95eb2A679609",
-    depositAmount: "4500000000000000000000",
-    withdrawalAmount: "4505000000000000000000",
-    largeWithdrawalAmount: "9000000000000000000000",
-    useWeth: true,
-  },
-  {
-    symbol: "SUSHI",
-    address: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
-    holder: "0x5028D77B91a3754fb38B2FBB726AF02d1FE44Db6",
-    depositAmount: "4500000000000000000000",
-    withdrawalAmount: "4505000000000000000000",
-    largeWithdrawalAmount: "9000000000000000000000",
-    useWeth: true,
-  },
+  // {
+  //   symbol: "RGT",
+  //   address: "0xD291E7a03283640FDc51b121aC401383A46cC623",
+  //   holder: "0xC1d1B12bCE4a73310F268d49EFAB95eb2A679609",
+  //   depositAmount: "4500000000000000000000",
+  //   withdrawalAmount: "4505000000000000000000",
+  //   largeWithdrawalAmount: "9000000000000000000000",
+  //   useWeth: true,
+  // },
+  // {
+  //   symbol: "SUSHI",
+  //   address: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+  //   holder: "0x5028D77B91a3754fb38B2FBB726AF02d1FE44Db6",
+  //   depositAmount: "4500000000000000000000",
+  //   withdrawalAmount: "4505000000000000000000",
+  //   largeWithdrawalAmount: "9000000000000000000000",
+  //   useWeth: true,
+  // },
 ];
 
 const token = tokens[Math.floor(Math.random() * tokens.length)];

@@ -2,7 +2,7 @@
  * Tests for the TankFactory
  */
 
-import deploy, { deployTank, encodeArgs } from "./helpers/utils";
+import contracts, { deployTank, encodeArgs } from "./helpers/utils";
 import { Contract } from "@ethersproject/contracts";
 
 import chai, { expect } from "chai";
@@ -19,7 +19,7 @@ describe("TankFactory", async function () {
   this.timeout(300000); // Set new timeout
 
   before(async () => {
-    [factory, tank] = await deploy(); // Deploy contracts and get addresses
+    [factory, tank] = await contracts; // Deploy contracts and get addresses
   });
 
   describe("Tank deployments", async () => {
@@ -31,7 +31,7 @@ describe("TankFactory", async function () {
     });
 
     it("Allows you to deploy new Tank", async () => {
-      const parameters: String = await encodeArgs(
+      const parameters: string = await encodeArgs(
         ["address", "address"],
         [borrowing.ADDRESS, addresses.FUSE_COMPTROLLER]
       );
@@ -43,7 +43,7 @@ describe("TankFactory", async function () {
   describe("Security", async () => {
     //We need a better name
     it("Does not allow you to deploy a Tank with the same input", async () => {
-      const parameters: String = await encodeArgs(
+      const parameters: string = await encodeArgs(
         ["address", "address"],
         [borrowing.ADDRESS, addresses.FUSE_COMPTROLLER]
       );
@@ -52,7 +52,7 @@ describe("TankFactory", async function () {
     });
 
     it("Requires valid comptroller", async () => {
-      const parameters: String = await encodeArgs(
+      const parameters: string = await encodeArgs(
         ["address", "address"],
         [borrowing.ADDRESS, addresses.EXAMPLE_ADDRESS] // Example Address is not a Comptroller
       );

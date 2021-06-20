@@ -1,10 +1,11 @@
 /**
  * Tests for Tanks (strategy contracts)
- * Evaluates user facing functions
+ * Evaluates user facing functions including deposits, withdrawals, and balances
+ * Note that since some of the withdrawal tests depend on rebalances, you will find more tests in later code
  */
 import { ethers } from "hardhat";
-import deploy, { supplyToFuse, impersonateAccount } from "./helpers/utils";
 import { Contract } from "@ethersproject/contracts";
+import contracts, { supplyToFuse, impersonateAccount } from "./helpers/utils";
 
 import chai, { expect } from "chai";
 const chaiAsPromised = require("chai-as-promised");
@@ -13,14 +14,16 @@ chai.use(chaiAsPromised);
 chai.should();
 
 import addresses from "./helpers/constants";
-const [token, borrowing] = [addresses.TOKEN, addresses.BORROWING];
+import Erc20Abi from "./helpers/abi/ERC20.json";
+
+const [token] = [addresses.TOKEN];
 
 describe("Tanks", async function () {
   let factory: Contract, tank: Contract;
   this.timeout(300000); // Set new timeout
 
   before(async () => {
-    [factory, tank] = await deploy(); // Deploy contracts and get addresses
+    [factory, tank] = await contracts; // Deploy contracts and get addresses
   });
 
   describe("Deposits", async () => {
@@ -62,6 +65,22 @@ describe("Tanks", async function () {
       );
 
       expect(parseInt(balanceAfter)).is.greaterThan(parseInt(balanceBefore));
+    });
+
+    it("Mints cTokens on Fuse", async () => {
+      const address: string = await tank.cToken();
+      const cToken: Contract = await ethers.getContractAt(Erc20Abi, address);
+
+      expect(parseInt(await cToken.balanceOf(tank.address))).is.greaterThan(0);
+    });
+  });
+
+  describe("Withrawals", async () => {
+    it("Burns Tank tokens", async () => {
+      // const balanceBefore = await tank.callStatic.balanceOf(token.HOLDER);
+      // await tank.connect(token.SIGNER).withdraw(token.AMOUNT);
+      // const balanceAfter = await tank.callStatic.balanceOf(token.HOLDER);
+      // expect(parseInt(balanceBefore)).is.greaterThan(parseInt(balanceAfter));
     });
   });
 });

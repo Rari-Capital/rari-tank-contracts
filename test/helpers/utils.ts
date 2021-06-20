@@ -10,7 +10,10 @@ import CErc20 from "./abi/CERC20.json";
 const borrowing = addresses.BORROWING;
 const token = addresses.TOKEN;
 
-export default async function deploy(): Promise<Contract[]> {
+const contracts: any = deploy();
+export default contracts;
+
+export async function deploy(): Promise<Contract[]> {
   await impersonateAccounts();
 
   const implementation = await deployContract("Tank", []);
@@ -23,7 +26,6 @@ export default async function deploy(): Promise<Contract[]> {
     FactoryAbi,
     factoryDelegate.address
   );
-
   await factory.newImplementation(implementation.address);
 
   const parameters = await encodeArgs(
@@ -49,8 +51,8 @@ export async function deployContract(
 
 export async function deployTank(
   factory: Contract,
-  implementation: Number,
-  parameters: String
+  implementation: number,
+  parameters: string
 ): Promise<Contract> {
   await factory.deployTank(implementation, `0x${parameters}`);
   const tanks = await factory.getTanks();
