@@ -20,6 +20,9 @@ describe("TankFactory", async function () {
 
   before(async () => {
     [factory, tank] = await contracts; // Deploy contracts and get addresses
+
+    // Register Tank contract with hardhat-gas-tracker by calling a function using one of the default signers
+    await tank.balanceOfUnderlying(borrowing.HOLDER);
   });
 
   describe("Tank deployments", async () => {
