@@ -4,13 +4,15 @@
 
 import { ethers } from "hardhat";
 import addresses from "./helpers/constants";
-import contracts from "./helpers/utils";
+import contracts, { impersonateAccount } from "./helpers/utils";
 const [token, borrowing] = [addresses.TOKEN, addresses.BORROWING];
 
 import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 
 import Erc20Abi from "./helpers/abi/ERC20.json";
+import CErc20Abi from "./helpers/abi/CERC20.json";
+import { BigNumber } from "@ethersproject/bignumber";
 
 describe("Rebalances", async function () {
   let factory: Contract, tank: Contract;
@@ -49,6 +51,24 @@ describe("Rebalances", async function () {
           (await tank.callStatic.balanceOfUnderlying(token.HOLDER)).toString()
         )
       );
+    });
+
+    it("Repays funds", async () => {
+      await impersonateAccount(tank.address);
+      const tankSigner = await ethers.provider.getSigner(tank.address);
+      const cToken = await ethers.getContractAt(CErc20Abi, await tank.cToken());
+
+      const balance: BigNumber = await cToken.callStatic.balanceOfUnderlying(
+        tank.address
+      );
+
+      await cToken.connect(tankSigner).redeemUnderlying(balance.div(2));
+
+      await (await borrowing.CONTRACT)
+        .connect(borrowing.HOLDER_SIGNER)
+        .transfer(addresses.RARI_FUND_CONTROLLER, borrowing.AMOUNT);
+
+      await tank.rebalance(token.USE_WETH);
     });
   });
 });

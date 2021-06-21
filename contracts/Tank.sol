@@ -164,14 +164,14 @@ contract Tank is TankStorage, ERC20Upgradeable {
             getBorrowBalanceDivergence(15e16); //15%
 
         require(divergenceSufficient || profitSufficient, "Tank: Cannot be rebalanced");
-        bool registerProfits = profit > (lastYieldSourceBalance * 5e15) / 1e18; //0.5%
 
+        bool registerProfits = false; //profit > (lastYieldSourceBalance * 5e15) / 1e18; //0.5%
+
+        if (profitSufficient) takeProfit(profit, useWeth);
         if (divergenceSufficient) {
             if (idealGreater) borrow(divergence, registerProfits ? profit : 0);
             else repay(divergence, registerProfits ? profit : 0);
         }
-
-        if (profitSufficient) takeProfit(profit, useWeth);
     }
 
     /********************
@@ -205,7 +205,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
         uint256 totalSupplied = MarketController.balanceOfUnderlying(cToken);
         uint256 represents = amount.mul(1e18).div(totalSupplied);
 
-        uint256 totalBorrowed = MarketController.balanceOfUnderlying(cToken);
+        uint256 totalBorrowed =
+            MarketController.borrowBalanceCurrent(comptroller, borrowing);
         uint256 due = totalBorrowed.mul(represents).div(1e18);
 
         repay(due, 0);
@@ -282,6 +283,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         )
     {
         uint256 idealBorrowAmount = getIdealBorrowAmount();
+
         idealGreater = idealBorrowAmount > lastBorrowBalance;
         divergence = idealGreater ? idealBorrowAmount - lastBorrowBalance : !idealGreater
             ? lastBorrowBalance - idealBorrowAmount

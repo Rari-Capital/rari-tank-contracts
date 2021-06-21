@@ -40,8 +40,7 @@ describe("Withdrawals", async function () {
       const newBalance: BigNumber = await (await token.CONTRACT).balanceOf(
         token.HOLDER
       );
-
-      expect(newBalance.sub(balance)).is.equal(parseInt(token.AMOUNT));
+      expect(newBalance.sub(balance)).is.equal(token.AMOUNT);
     });
   });
 
