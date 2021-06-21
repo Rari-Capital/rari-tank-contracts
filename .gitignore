@@ -13,3 +13,5 @@ tests
 
 contracts/Comments.sol
 contracts/.DS_STORE
+
+.vscode
