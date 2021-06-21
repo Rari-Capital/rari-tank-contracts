@@ -123,11 +123,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
     function deposit(uint256 amount) external {
         require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
 
-        uint256 decimals = ERC20Upgradeable(token).decimals();
         uint256 price = MarketController.getPriceEth(comptroller, token);
-
         uint256 deposited = price.mul(amount).div(1e18); //The deposited amount in ETH
-
         require(deposited >= 1e18, "Tank: Amount must be worth at least one Ether");
 
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -135,7 +132,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
         MarketController.enterMarkets(cToken, comptroller);
 
         uint256 exchangeRate = exchangeRateCurrent();
-        _mint(msg.sender, amount.mul(exchangeRate).div(10**decimals));
+        uint256 mantissa = ERC20Upgradeable(token).decimals();
+        _mint(msg.sender, amount.mul(exchangeRate).div(10**mantissa));
     }
 
     /** @dev Deposit devs into the Tanks */
@@ -146,10 +144,12 @@ contract Tank is TankStorage, ERC20Upgradeable {
         require(amount <= balance, "Tank: Amount must be less than balance");
 
         uint256 exchangeRate = exchangeRateCurrent();
-        uint256 decimals = ERC20Upgradeable(token).decimals();
+        uint256 mantissa = ERC20Upgradeable(token).decimals();
 
-        _burn(msg.sender, amount.mul(10**(36 - decimals)).div(exchangeRate));
-        //_withdraw(amount); // Withdraw funds from money market
+        _burn(msg.sender, amount.mul(10**(36 - mantissa)).div(exchangeRate));
+        withdrawFunds(amount); // Withdraw funds from money market
+
+        IERC20(token).safeTransfer(msg.sender, amount); // Transfer the funds
     }
 
     /** 
@@ -179,12 +179,12 @@ contract Tank is TankStorage, ERC20Upgradeable {
      ********************/
     /** @dev Get the tank Token Exchange rate */
     function exchangeRateCurrent() public returns (uint256) {
-        uint256 totalSupply = totalSupply();
+        uint256 supply = totalSupply();
         uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
         uint256 balance = MarketController.balanceOfUnderlying(cToken) * (10**mantissa);
 
-        if (balance == 0 || totalSupply == 0) return 1e18;
-        return balance.mul(1e18).div(totalSupply);
+        if (balance == 0 || supply == 0) return 1e18;
+        return balance.mul(1e18).div(supply);
     }
 
     /** @dev Get a user's balance of underlying tokens */
@@ -199,6 +199,19 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /********************
      * Internal Functions *
      *********************/
+
+    /** @dev  */
+    function withdrawFunds(uint256 amount) internal {
+        uint256 totalSupplied = MarketController.balanceOfUnderlying(cToken);
+        uint256 represents = amount.mul(1e18).div(totalSupplied);
+
+        uint256 totalBorrowed = MarketController.balanceOfUnderlying(cToken);
+        uint256 due = totalBorrowed.mul(represents).div(1e18);
+
+        repay(due, 0);
+        MarketController.withdraw(cToken, amount);
+    }
+
     /** @dev Withdraw from the YSC, repay debts, and swap profits */
     function takeProfit(uint256 profit, bool useWeth) internal {
         uint256 borrowBalance = MarketController.borrowBalanceCurrent(comptroller, token);
