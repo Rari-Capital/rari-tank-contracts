@@ -1,5 +1,5 @@
 /**
- * Tests for Tank rebalances, identifying whether they work
+ * Tests for Tank rebalances
  */
 
 import { ethers } from "hardhat";
@@ -33,6 +33,22 @@ describe("Rebalances", async function () {
       expect(
         parseInt(await yieldSourceToken.balanceOf(tank.address))
       ).is.greaterThan(0);
+    });
+  });
+
+  describe("Registers profit", async () => {
+    it("Earning DAI increases the exchangeRate and user balances", async () => {
+      await (await borrowing.CONTRACT)
+        .connect(borrowing.HOLDER_SIGNER)
+        .transfer(addresses.RARI_FUND_CONTROLLER, borrowing.AMOUNT);
+
+      const balance = await tank.callStatic.balanceOfUnderlying(token.HOLDER);
+      await tank.rebalance(token.USE_WETH);
+      expect(parseInt(balance.toString())).is.lessThan(
+        parseInt(
+          (await tank.callStatic.balanceOfUnderlying(token.HOLDER)).toString()
+        )
+      );
     });
   });
 });
