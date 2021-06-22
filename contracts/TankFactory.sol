@@ -29,7 +29,10 @@ contract TankFactory is TankFactoryStorage, Ownable {
     /********************
      * External Functions *
      *********************/
-    /** @dev Register a new implementaiton contract */
+    /** 
+        @dev Register a new implementaiton contract
+        @param implementation address of the implementation contract
+    */
     function newImplementation(address implementation)
         external
         canCall
@@ -40,8 +43,8 @@ contract TankFactory is TankFactoryStorage, Ownable {
             "TankFactory: Implementation already exists"
         );
 
-        initialImplementations.push(implementation);
-        uint256 id = initialImplementations.length;
+        initialImplementations.push(implementation); // Push initial implementation address
+        uint256 id = initialImplementations.length; // Calculate the implementation ID
 
         implementationById[id] = implementation;
         idByImplementation[implementation] = id;
@@ -50,31 +53,34 @@ contract TankFactory is TankFactoryStorage, Ownable {
         emit NewImplementation(idByImplementation[implementation], implementation);
     }
 
-    /** @dev Deploy a new Tank contract */
-    function deployTank(uint256 implementationId, bytes memory data)
-        external
-        returns (address)
-    {
-        // Input Validation
-
+    /** 
+        @dev Deploy a new Tank contract
+        @param id The id of the implementation contract
+        @param data A bytes parameter that is passed to the contract's constructor
+    */
+    function deployTank(uint256 id, bytes memory data) external returns (address) {
         require(
-            implementationById[implementationId] != address(0),
+            implementationById[id] != address(0),
             "TankFactory: Implementation does not exist"
         );
 
-        bytes32 salt = keccak256(abi.encodePacked(data, implementationId));
-        TankDelegator tank = new TankDelegator{salt: salt}(implementationId, data);
+        bytes32 salt = keccak256(abi.encodePacked(data, id));
+        TankDelegator tank = new TankDelegator{salt: salt}(id, data);
 
-        emit NewTank(address(tank), data, implementationId);
+        emit NewTank(address(tank), data, id);
         tanks.push(address(tank));
     }
 
-    /** @dev Modify the canCall variable, changing permissions for Tank creation  */
+    /** @dev Modify the canCall variable, changing permissions for implementation registration  */
     function changePermissions(bool newPermissions) external onlyOwner() {
         canDeploy = newPermissions;
     }
 
-    /** @dev Transfer ownership of an implementation */
+    /** 
+        @dev Transfer ownership of an implementation
+        @param id The id of the implementation contract
+        @param newOwner the new implementation owner
+    */
     function transferImplementationOwnership(uint256 id, address newOwner) external {
         require(
             ownerByImplementation[id] == msg.sender,
@@ -85,7 +91,11 @@ contract TankFactory is TankFactoryStorage, Ownable {
         emit ImplementationOwnerTransfered(id, newOwner);
     }
 
-    /** @dev Upgrade the implementation address */
+    /** 
+        @dev Upgrade the implementation address
+        @param id The id of the implementation contract
+        @param implementation The address of the new implementation contract
+    */
     function upgradeImplementation(uint256 id, address implementation) external {
         require(
             ownerByImplementation[id] == msg.sender,
@@ -96,6 +106,7 @@ contract TankFactory is TankFactoryStorage, Ownable {
         emit ImplementationUpgraded(id, implementation);
     }
 
+    /** @return an array of all Tanks */
     function getTanks() external view returns (address[] memory) {
         return tanks;
     }

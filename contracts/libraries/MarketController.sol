@@ -49,7 +49,7 @@ library MarketController {
         );
     }
 
-    /**  @dev Call the enterMarkets() function allowing you to start borrowing against the asset */
+    /**  @dev Call the enterMarkets() function allowing you to start borrowing against your collateral */
     function enterMarkets(address cErc20, address comptroller) internal {
         address[] memory cTokens = new address[](1);
         cTokens[0] = cErc20;
@@ -138,11 +138,15 @@ library MarketController {
         address comptroller,
         address token
     ) internal returns (uint256) {
+        // Get the collateral factor
         (, uint256 collateralFactor) = IComptroller(comptroller).markets(cToken);
+
+        // Get the USD price of the token
         uint256 price = getPrice(comptroller, token);
         uint256 balance = ICErc20(cToken).balanceOfUnderlying(address(this));
-        uint256 balanceUSD = balance.mul(price).div(1e18);
+        uint256 balanceUSD = balance.mul(price).div(1e18); // Calculate the USD balance using the balance and price of the token
 
+        // Calculate the borrow amount in USD using the collateral factor and USD balance
         return balanceUSD.mul(collateralFactor).div(1e18);
     }
 

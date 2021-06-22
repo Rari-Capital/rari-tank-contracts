@@ -40,16 +40,16 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Variables *
      *************/
 
-    /** @dev The address of the ERC20 token that users deposit/earn yield on in the Tank */
+    /** @dev The address of the ERC20 token that users deposit and earn yield on in the Tank */
     address public token;
 
-    /** @dev The address of the Fuse fToken that represents the Tank's underlying balance */
+    /** @dev The address of the Fuse fToken that represents the Tank's collateral */
     address public cToken;
 
     /** @dev The token that the Tank borrows and deposits into a yield source */
     address public borrowing;
 
-    /** @dev Address of the FusePool Comptroller token */
+    /** @dev Address of the FusePool Comptroller contract */
     address internal comptroller;
 
     /** @dev A value representing the ideal (percentage) used borrow limit scaled by 1e18 */
@@ -58,24 +58,31 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Borrow balance, set whenever funds are borrowed or repaid */
     uint256 internal lastBorrowBalance;
 
-    /** @dev Yield source Balance, set whenever funds are deposited or withdrawn */
+    /** @dev Yield source Balance, set whenever funds are deposited or withdrew */
     uint256 internal lastYieldSourceBalance;
 
     /** @dev The address for the WETH contract */
     address internal WETH;
 
+    /** @dev Uniswap router address */
+    address internal router;
+
     /** @dev Maps addresses to the block number of their last action */
     mapping(address => uint256) internal lastAction;
 
-    /** @dev Chainlink price feed for gas prices */
+    /** @dev Chainlink oracle for gas prices */
     AggregatorV3Interface constant FASTGAS =
         AggregatorV3Interface(0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C);
 
     /***************
      * Constructor *
      ***************/
-    /** @dev Initialize the Tank contract (acts as a constructor) */
+    /** 
+        @dev Initialize the Tank contract 
+        @param data A bytes parameter representing the constructor arguments
+    */
     function initialize(bytes memory data) external initializer {
+        // Extract the token and comptroller addresses from the bytes parameter
         (address _token, address _comptroller) = abi.decode(data, (address, address));
 
         require(
@@ -89,15 +96,17 @@ contract Tank is TankStorage, ERC20Upgradeable {
         comptroller = _comptroller;
 
         /* 
-            Ideally, this would be a constant state variable, 
-            but since this is a proxy contract it would be unsafe
+            Ideally, these would be a constant state variables, 
+            but since this is a proxy contract it would be unsafe to do so
         */
         borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+        router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
         idealUsedBorrowLimit = 55e16; // 55%
 
         string memory borrowSymbol = ERC20Upgradeable(borrowing).symbol();
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
+        MarketController.enterMarkets(cToken, _comptroller);
 
         __ERC20_init(
             string(abi.encodePacked("Tank ", ERC20Upgradeable(_token).name())),
@@ -118,11 +127,14 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Mofifiers *
      *************/
 
-    /** @dev Pay callers for calling a method  */
+    /** 
+        @dev Pay the caller of a function in underlying tokens 
+        This modifier is used for rebalances
+    */
     modifier pay() {
         uint256 gas = gasleft();
         _;
-        uint256 used = 13e5 + gas - gasleft(); // Gas used to call function added to the gas used to pay the caller (1e15)
+        uint256 used = 13e5 + gas - gasleft(); // Gas used to call the method added to the gas used by this modifier (13e5)
 
         uint256 decimals = ERC20Upgradeable(token).decimals();
         uint256 mantissa = 18 - decimals; // Price data is scaled by 1e(18 - decimals)
@@ -131,16 +143,17 @@ contract Tank is TankStorage, ERC20Upgradeable {
             MarketController.getPriceEth(comptroller, token).div(10**mantissa);
         (, int256 ethPrice, , , ) = MarketController.ETH_PRICEFEED.latestRoundData();
 
-        uint256 fee = used.mul(uint256(ethPrice));
-        uint256 toPay = fee.mul(10**decimals).div(price);
+        uint256 fee = used.mul(uint256(ethPrice)); // The fee, paid by the caller, in ETH
+        uint256 toPay = fee.mul(10**decimals).div(price); // Calculate the fee, paid by the caller, in tokens
 
-        withdrawFunds(toPay);
-        IERC20(token).safeTransfer(msg.sender, toPay);
+        withdrawFunds(toPay); // Withdraw funds from Fuse
+        IERC20(token).safeTransfer(msg.sender, toPay); // Transfer compensation to caller
     }
 
     /** 
         @dev Ensure that users don't call a method until a certain number of blocks have passed 
-        @param blocks The number of blocks that the call must 
+        @param blocks The number of blocks that the call must occur after the last action
+        The minimum number of blocks that must be mined after the last action for this method to be callable
     */
     modifier blockLock(uint256 blocks) {
         require(
@@ -149,7 +162,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         );
         _;
 
-        lastAction[msg.sender] = block.number;
+        lastAction[msg.sender] = block.number; // Set new last action
     }
 
     /********************
@@ -160,73 +173,82 @@ contract Tank is TankStorage, ERC20Upgradeable {
         //300 blocks is about one hour
         require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
 
+        // Ensure that deposit amount is greater than 2 ETH
         uint256 price = MarketController.getPriceEth(comptroller, token);
-        uint256 deposited = price.mul(amount).div(1e18); //The deposited amount in ETH
-        require(deposited >= 1e18, "Tank: Amount must be worth at least one Ether");
+        uint256 deposited = price.mul(amount).div(1e18); //Calculated the deposited amount in ETH
+        require(deposited >= 2e18, "Tank: Amount must be worth at least one Ether");
 
+        // Get tokens from users and deposit them into Fuse
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         MarketController.supply(cToken, amount); // Deposit into Fuse
-        MarketController.enterMarkets(cToken, comptroller);
 
+        // Mint tokens to the user
         uint256 exchangeRate = exchangeRateCurrent();
         uint256 mantissa = ERC20Upgradeable(token).decimals();
         _mint(msg.sender, amount.mul(exchangeRate).div(10**mantissa));
     }
 
-    /** @dev Deposit devs into the Tanks */
+    /** @dev Withdraw from the Tank  */
     function withdraw(uint256 amount) external blockLock(300) {
         // 300 blocks is about 1 hour
         require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
 
+        // Calculate balance and ensure that withdrawal amount is less than or equal to it
         uint256 balance = balanceOfUnderlying(msg.sender);
-        require(amount <= balance, "Tank: Amount must be less than balance");
+        require(amount <= balance, "Tank: Balance too low");
 
+        // Burn Tank tokens
         uint256 exchangeRate = exchangeRateCurrent();
         uint256 mantissa = ERC20Upgradeable(token).decimals();
-
         _burn(msg.sender, amount.mul(10**(36 - mantissa)).div(exchangeRate));
-        withdrawFunds(amount); // Withdraw funds from money market
 
+        // Withdraw funds from the Tank and transfer them to the user
+        withdrawFunds(amount); // Withdraw funds from money market
         IERC20(token).safeTransfer(msg.sender, amount); // Transfer the funds
     }
 
     /** 
         @dev Rebalance the Tank
-        @param useWeth Use Weth when trading between ETH and     
+        @param useWeth A boolean indicating whether to use wEth when swapping between tokens
     */
     function rebalance(bool useWeth) external pay blockLock(100) {
         // 100 blocks is about 20 mins
-        require(msg.sender == tx.origin, "Tank: Can only be called by an EOA"); // Require that only a contract can call this
+        require(msg.sender == tx.origin, "Tank: Can only be called by an EOA"); // Require that only an EO can call this method
 
+        // Calculate profit and evaluate whether it is sufficient enough to trigger a rebalance
         (uint256 profit, bool profitSufficient) = getProfit(5e15); //0.5 percent
+
+        // Calculate borrow balance divergence and evaluate whether it is sufficient enough to trigger a rebalance
         (uint256 divergence, bool idealGreater, bool divergenceSufficient) =
             getBorrowBalanceDivergence(15e16); //15%
 
+        // Ensure that either the earned profit or borrow balance divergence is enough to trigger a rebalance
         require(divergenceSufficient || profitSufficient, "Tank: Cannot be rebalanced");
 
-        bool registerProfits = false; //profit > (lastYieldSourceBalance * 5e15) / 1e18; //0.5%
-
+        // Take profit and supply it as collateral
         if (profitSufficient) takeProfit(profit, useWeth);
+        // Repay debts or borrow more funds to match the ideal bororw balance
         if (divergenceSufficient) {
-            if (idealGreater) borrow(divergence, registerProfits ? profit : 0);
-            else repay(divergence, registerProfits ? profit : 0);
+            if (idealGreater) borrow(divergence);
+            else repay(divergence);
         }
     }
 
     /********************
      * Public Functions *
      ********************/
-    /** @dev Get the tank Token Exchange rate */
+    /** @dev Get the tank Token Exchange rate scaled by 1e18 */
     function exchangeRateCurrent() public returns (uint256) {
         uint256 supply = totalSupply();
         uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
         uint256 balance = MarketController.balanceOfUnderlying(cToken) * (10**mantissa);
 
+        // The initial exchange rate should be 1:1\
         if (balance == 0 || supply == 0) return 1e18;
-        return balance.mul(1e18).div(supply);
+        return balance.mul(1e18).div(supply); // Otherwise (balance / supply)
     }
 
-    /** @dev Get a user's balance of underlying tokens */
+    /** @dev Get a user's balance in underlying tokens */
     function balanceOfUnderlying(address account) public returns (uint256) {
         uint256 balance = balanceOf(account);
         uint256 mantissa = 36 - ERC20Upgradeable(token).decimals();
@@ -239,42 +261,50 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Internal Functions *
      *********************/
 
-    /** @dev  */
+    /** @dev Withdraw funds from Fuse while maintaining the collateral factor */
     function withdrawFunds(uint256 amount) internal {
+        // Calculate the percentage of the balance that the amount represents
         uint256 totalSupplied = MarketController.balanceOfUnderlying(cToken);
         uint256 represents = amount.mul(1e18).div(totalSupplied);
 
         uint256 totalBorrowed =
             MarketController.borrowBalanceCurrent(comptroller, borrowing);
+
+        // Use the percentage value to calculate the borrow balance due
         uint256 due = totalBorrowed.mul(represents).div(1e18);
 
-        repay(due, 0);
-        MarketController.withdraw(cToken, amount);
+        repay(due); // Repay the due amount
+        MarketController.withdraw(cToken, amount); // Withdraw the tokens
     }
 
-    /** @dev Withdraw from the YSC, repay debts, and swap profits */
+    /** @dev Withdraw from the yield source, repay debts, and swap profits */
     function takeProfit(uint256 profit, bool useWeth) internal {
+        // Compare the current borrow balance to the last one
         uint256 borrowBalance = MarketController.borrowBalanceCurrent(comptroller, token);
         uint256 debt =
             borrowBalance > lastBorrowBalance ? borrowBalance - lastBorrowBalance : 0;
 
-        YieldSourceController.withdraw(profit);
+        YieldSourceController.withdraw(profit); // Withdraw profits from the yield source
         lastYieldSourceBalance = YieldSourceController.balanceOf();
 
         if (debt >= profit) {
+            // If the debt >= profit, repay part of the loan using the entirety of the profit
             MarketController.repay(comptroller, borrowing, profit);
             return;
         } else if (profit > debt && debt > 0)
+            // If the debt is nonzero but less than the profit, repay the debt using part of the profit
             MarketController.repay(comptroller, borrowing, debt);
 
+        // Swap borrowed (earned) tokens to collateral tokens and supply it to Fuse
         MarketController.supply(cToken, swapProfit(useWeth, profit - debt));
     }
 
     /** @dev Swap profits from the borrowed asset to the supplied asset */
     function swapProfit(bool useWeth, uint256 amount) internal returns (uint256) {
-        address[] memory path = new address[](useWeth ? 3 : 2);
+        address[] memory path = new address[](useWeth ? 3 : 2); // The size of the path is based on
         path[0] = borrowing;
 
+        // The size of the path is based on the useWeth parameter
         if (useWeth) {
             path[1] = WETH;
             path[2] = token;
@@ -282,9 +312,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
             path[1] = token;
         }
 
-        address router = _getRouter(path, amount);
-        IERC20(borrowing).approve(address(router), amount);
+        IERC20(borrowing).approve(router, amount);
 
+        // Swap tokens and return the output amount
         return
             IUniswapV2Router02(router).swapExactTokensForTokens(
                 amount,
@@ -292,25 +322,28 @@ contract Tank is TankStorage, ERC20Upgradeable {
                 path,
                 address(this),
                 block.timestamp
-            )[useWeth ? 2 : 1];
+            )[useWeth ? 2 : 1]; // The location of the output amount in the returned array is based on the useWeth arg
     }
 
     /** 
         @dev Get the Tank's profits in the yield source and evaluate whether it is greater than a certain threshold
-        @param threshold The threshold for profits 
+        @param threshold The percentage threshold for profits 
     */
     function getProfit(uint256 threshold)
         internal
         returns (uint256 profit, bool sufficient)
     {
+        // Calculate the profit by subtracting the last balance from the current one
         profit = YieldSourceController.balanceOf().sub(lastYieldSourceBalance);
+
+        // Using the percentage threshold, calculate the minimum profit needed to trigger a rebalance
         uint256 thresholdValue = lastYieldSourceBalance.mul(threshold).div(1e18);
-        sufficient = profit > thresholdValue;
+        sufficient = profit > thresholdValue; // Identify whether the profit is sufficient enough to initiate a rebalance
     }
 
     /** 
         @dev Get the borrow balance divergence 
-        @return divergence the divergence
+        @return divergence the borrow balance divergence
         @return idealGreater a boolean indicating whether the ideal balance is greater than the current one 
     */
     function getBorrowBalanceDivergence(uint256 threshold)
@@ -321,53 +354,47 @@ contract Tank is TankStorage, ERC20Upgradeable {
             bool divergenceSufficient
         )
     {
-        uint256 idealBorrowAmount = getIdealBorrowAmount();
+        uint256 idealBorrowAmount = getIdealBorrowAmount(); // Get the ideal borrow balance
+        idealGreater = idealBorrowAmount > lastBorrowBalance; // Identify whether the borrow balance is greater
 
-        idealGreater = idealBorrowAmount > lastBorrowBalance;
+        // Identify how much the borrow balance has diverged from the ideal borrow amount
         divergence = idealGreater ? idealBorrowAmount - lastBorrowBalance : !idealGreater
             ? lastBorrowBalance - idealBorrowAmount
             : 0;
 
+        // Using the percentage threshold, identify whether the divergence is sufficient to initiate a rebalance
         uint256 borrowThreshold = lastBorrowBalance.mul(threshold).div(1e18);
         divergenceSufficient = divergence > borrowThreshold;
     }
 
-    /** @dev Borrow a stable asset from Fuse and deposit it into Rari */
-    function borrow(uint256 borrowAmount, uint256 depositAmount) internal {
+    /** @dev Borrow a stable asset from Fuse and deposit it into the yield source */
+    function borrow(uint256 borrowAmount) internal {
         MarketController.borrow(comptroller, borrowing, borrowAmount);
         lastBorrowBalance += borrowAmount;
 
-        YieldSourceController.deposit(borrowing, borrowAmount - depositAmount);
-        lastYieldSourceBalance += borrowAmount - depositAmount;
+        YieldSourceController.deposit(borrowing, borrowAmount);
+        lastYieldSourceBalance += borrowAmount;
     }
 
-    /** @dev Withdraw a stable asset from Rari and repay */
-    function repay(uint256 withdrawalAmount, uint256 repayAmount) internal {
+    /** @dev Withdraw a stable asset from the yield source and repay part of the loan */
+    function repay(uint256 withdrawalAmount) internal {
         YieldSourceController.withdraw(withdrawalAmount);
         lastYieldSourceBalance -= withdrawalAmount;
 
-        MarketController.repay(comptroller, borrowing, withdrawalAmount - repayAmount);
-        lastBorrowBalance -= (withdrawalAmount - repayAmount);
+        MarketController.repay(comptroller, borrowing, withdrawalAmount);
+        lastBorrowBalance -= (withdrawalAmount);
     }
 
     /** @return the ideal borrow amount */
     function getIdealBorrowAmount() internal returns (uint256) {
+        // Calculate the max borrow amount is USD
         uint256 usdBorrowAmount =
             MarketController.maxBorrowAmountUSD(cToken, comptroller, token);
 
         return
             MarketController
-                .getTokensFromUsd(comptroller, borrowing, usdBorrowAmount)
-                .mul(idealUsedBorrowLimit)
+                .getTokensFromUsd(comptroller, borrowing, usdBorrowAmount) // Convert the usd borrow amount to borrowed tokens
+                .mul(idealUsedBorrowLimit) // Multiply this value by the percentage ideal used borrow limit
                 .div(1e18);
-    }
-
-    /** @dev Identify the best market to swap on */
-    function _getRouter(address[] memory path, uint256 amount)
-        internal
-        returns (address)
-    {
-        //TODO: Add evaluation code
-        return 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     }
 }
