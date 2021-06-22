@@ -22,11 +22,20 @@ describe("Rebalances", async function () {
     [factory, tank] = await contracts; // Deploy contracts and get addresses
   });
 
-  describe("External Interactions", async () => {
-    it("Rebalances function correctly", async () => {
+  describe("Correct function", async () => {
+    it("Rebalances do not fail", async () => {
       await tank.rebalance(token.USE_WETH);
     });
 
+    it("Rebalancers are paid", async () => {
+      const rebalancer = (await ethers.getSigners())[0];
+      expect(
+        parseInt(await (await token.CONTRACT).balanceOf(rebalancer.address))
+      ).is.greaterThan(0);
+    });
+  });
+
+  describe("External Interactions", async () => {
     it("Deposits into the Yield Source", async () => {
       const yieldSourceToken = await ethers.getContractAt(
         Erc20Abi,
@@ -36,9 +45,7 @@ describe("Rebalances", async function () {
         parseInt(await yieldSourceToken.balanceOf(tank.address))
       ).is.greaterThan(0);
     });
-  });
 
-  describe("Registers profit", async () => {
     it("Earning DAI increases the exchangeRate and user balances", async () => {
       await (await borrowing.CONTRACT)
         .connect(borrowing.HOLDER_SIGNER)
@@ -52,7 +59,9 @@ describe("Rebalances", async function () {
         )
       );
     });
+  });
 
+  describe("Registers profit", async () => {
     it("Repays funds", async () => {
       await impersonateAccount(tank.address);
       const tankSigner = await ethers.provider.getSigner(tank.address);
