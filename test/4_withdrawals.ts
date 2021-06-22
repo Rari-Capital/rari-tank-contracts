@@ -4,7 +4,7 @@
 
 import { ethers } from "hardhat";
 import addresses from "./helpers/constants";
-import contracts from "./helpers/utils";
+import contracts, { advanceBlock } from "./helpers/utils";
 const [token, borrowing] = [addresses.TOKEN, addresses.BORROWING];
 
 import { Contract } from "@ethersproject/contracts";
@@ -29,6 +29,8 @@ describe("Withdrawals", async function () {
 
   describe("Withdrawals", async () => {
     it("Burns Tank tokens", async () => {
+      await advanceBlock(300);
+
       const balanceBefore = await tank.callStatic.balanceOf(token.HOLDER);
       await tank.connect(token.SIGNER).withdraw(token.AMOUNT);
       expect(parseInt(balanceBefore)).is.greaterThan(
@@ -49,6 +51,8 @@ describe("Withdrawals", async function () {
       const balance: number = await tank.callStatic.balanceOfUnderlying(
         token.HOLDER
       );
+
+      await advanceBlock(300);
 
       await tank
         .connect(token.SIGNER)

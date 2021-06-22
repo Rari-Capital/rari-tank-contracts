@@ -4,7 +4,7 @@
 
 import { ethers } from "hardhat";
 import addresses from "./helpers/constants";
-import contracts, { impersonateAccount } from "./helpers/utils";
+import contracts, { impersonateAccount, advanceBlock } from "./helpers/utils";
 const [token, borrowing] = [addresses.TOKEN, addresses.BORROWING];
 
 import { Contract } from "@ethersproject/contracts";
@@ -47,6 +47,8 @@ describe("Rebalances", async function () {
     });
 
     it("Earning DAI increases the exchangeRate and user balances", async () => {
+      await advanceBlock(100);
+
       await (await borrowing.CONTRACT)
         .connect(borrowing.HOLDER_SIGNER)
         .transfer(addresses.RARI_FUND_CONTROLLER, borrowing.AMOUNT);
@@ -63,6 +65,8 @@ describe("Rebalances", async function () {
 
   describe("Registers profit", async () => {
     it("Repays funds", async () => {
+      await advanceBlock(100);
+
       await impersonateAccount(tank.address);
       const tankSigner = await ethers.provider.getSigner(tank.address);
       const cToken = await ethers.getContractAt(CErc20Abi, await tank.cToken());

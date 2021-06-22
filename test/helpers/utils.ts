@@ -1,6 +1,8 @@
 import addresses from "./constants";
 import hre, { ethers } from "hardhat";
-import { Contract, ContractFactory } from "@ethersproject/contracts";
+
+import { Contract } from "@ethersproject/contracts";
+const time = require("@openzeppelin/test-helpers").time;
 
 import FactoryAbi from "./abi/Factory.json";
 import TankAbi from "./abi/RariFundTank.json";
@@ -86,6 +88,16 @@ export async function impersonateAccount(account: String) {
     method: "hardhat_impersonateAccount",
     params: [account],
   });
+}
+
+export async function advanceBlock(by: number) {
+  for (let i = 0; i <= by; i++) {
+    await hre.network.provider.request({
+      method: "evm_mine",
+      params: [0],
+    });
+  }
+  //await time.advanceBlockTo((await time.latestBlock()) + by);
 }
 
 async function impersonateAccounts() {
