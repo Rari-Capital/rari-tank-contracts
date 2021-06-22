@@ -57,4 +57,7 @@ abstract contract TankFactoryStorage {
 
     /** @dev Emitted when a new Tank has been created */
     event NewTank(address tank, bytes indexed input, uint256 indexed id);
+
+    /** @dev Emitted when the owner of an implementation is updated */
+    event ImplementationOwnerTransfered(uint256 indexed id, address indexed newOwner);
 }
