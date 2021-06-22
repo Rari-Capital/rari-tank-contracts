@@ -57,9 +57,7 @@ describe("Withdrawals", async function () {
       await tank
         .connect(token.SIGNER)
         .withdraw(balance + 1)
-        .should.be.revertedWith(
-          "revert Tank: Amount must be less than balance"
-        );
+        .should.be.revertedWith("revert Tank:");
     });
   });
 });
