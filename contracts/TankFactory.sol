@@ -67,9 +67,6 @@ contract TankFactory is TankFactoryStorage, Ownable {
         tanks.push(address(tank));
     }
 
-    /** @dev  */
-    function reblanace(address) external {}
-
     function getTanks() external view returns (address[] memory) {
         return tanks;
     }

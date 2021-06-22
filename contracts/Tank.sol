@@ -14,7 +14,9 @@ import {IFusePoolDirectory} from "./external/fuse/IFusePoolDirectory.sol";
 //prettier-ignore
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {IUniswapV2Router02} from "./external/uniswapv2/IUniswapV2Router.sol";
+import {AggregatorV3Interface} from "./external/chainlink/AggregatorV3Interface.sol";
 
 /* Libraries */
 import {MarketController} from "./libraries/MarketController.sol";
@@ -61,6 +63,10 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
     /** @dev The address for the WETH contract */
     address internal WETH;
+
+    /** @dev Chainlink price feed for gas prices */
+    AggregatorV3Interface constant FASTGAS =
+        AggregatorV3Interface(0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C);
 
     /***************
      * Constructor *
@@ -113,7 +119,20 @@ contract Tank is TankStorage, ERC20Upgradeable {
     modifier pay() {
         uint256 gas = gasleft();
         _;
-        uint256 used = gas - gasleft();
+        uint256 used = 13e5 + gas - gasleft(); // Gas used to call function added to the gas used to pay the caller (1e15)
+
+        uint256 decimals = ERC20Upgradeable(token).decimals();
+        uint256 mantissa = 18 - decimals; // Price data is scaled by 1e(18 - decimals)
+
+        uint256 price =
+            MarketController.getPriceEth(comptroller, token).div(10**mantissa);
+        (, int256 ethPrice, , , ) = MarketController.ETH_PRICEFEED.latestRoundData();
+
+        uint256 fee = used.mul(uint256(ethPrice));
+        uint256 toPay = fee.mul(10**decimals).div(price);
+
+        withdrawFunds(toPay);
+        IERC20(token).safeTransfer(msg.sender, toPay);
     }
 
     /********************
