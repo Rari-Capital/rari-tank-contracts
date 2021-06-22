@@ -41,8 +41,11 @@ contract TankFactory is TankFactoryStorage, Ownable {
         );
 
         initialImplementations.push(implementation);
-        implementationById[initialImplementations.length] = implementation;
-        idByImplementation[implementation] == initialImplementations.length;
+        uint256 id = initialImplementations.length;
+
+        implementationById[id] = implementation;
+        idByImplementation[implementation] = id;
+        ownerByImplementation[initialImplementations.length] = msg.sender;
 
         emit NewImplementation(idByImplementation[implementation], implementation);
     }
@@ -59,12 +62,38 @@ contract TankFactory is TankFactoryStorage, Ownable {
             "TankFactory: Implementation does not exist"
         );
 
-        bytes memory bytecode = type(TankDelegator).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(data, implementationId));
         TankDelegator tank = new TankDelegator{salt: salt}(implementationId, data);
 
         emit NewTank(address(tank), data, implementationId);
         tanks.push(address(tank));
+    }
+
+    /** @dev Modify the canCall variable, changing permissions for Tank creation  */
+    function changePermissions(bool newPermissions) external onlyOwner() {
+        canDeploy = newPermissions;
+    }
+
+    /** @dev Transfer ownership of an implementation */
+    function transferImplementationOwnership(uint256 id, address newOwner) external {
+        require(
+            ownerByImplementation[id] == msg.sender,
+            "TankFactory: Must be called by the implementation owner"
+        );
+
+        ownerByImplementation[id] = newOwner;
+        emit ImplementationOwnerTransfered(id, newOwner);
+    }
+
+    /** @dev Upgrade the implementation address */
+    function upgradeImplementation(uint256 id, address implementation) external {
+        require(
+            ownerByImplementation[id] == msg.sender,
+            "TankFactory: Must be called by the implementation owner"
+        );
+
+        implementationById[id] = implementation;
+        emit ImplementationUpgraded(id, implementation);
     }
 
     function getTanks() external view returns (address[] memory) {
