@@ -135,12 +135,10 @@ contract Tank is TankStorage, ERC20Upgradeable {
         uint256 gas = gasleft();
         _;
         uint256 used = 13e5 + gas - gasleft(); // Gas used to call the method added to the gas used by this modifier (13e5)
-
         uint256 decimals = ERC20Upgradeable(token).decimals();
-        uint256 mantissa = 18 - decimals; // Price data is scaled by 1e(18 - decimals)
 
         uint256 price =
-            MarketController.getPriceEth(comptroller, token).div(10**mantissa);
+            MarketController.getPriceEth(comptroller, token).div(1e18).mul(10**decimals);
         (, int256 ethPrice, , , ) = MarketController.ETH_PRICEFEED.latestRoundData();
 
         uint256 fee = used.mul(uint256(ethPrice)); // The fee, paid by the caller, in ETH
@@ -200,7 +198,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
         // Burn Tank tokens
         uint256 exchangeRate = exchangeRateCurrent();
         uint256 mantissa = ERC20Upgradeable(token).decimals();
-        _burn(msg.sender, amount.mul(10**(36 - mantissa)).div(exchangeRate));
+
+        //_burn(msg.sender, amount.mul(10**(36 - mantissa)).div(exchangeRate));
+        _burn(msg.sender, amount.mul(1e36).div(10**mantissa).div(exchangeRate));
 
         // Withdraw funds from the Tank and transfer them to the user
         withdrawFunds(amount); // Withdraw funds from money market
@@ -240,8 +240,10 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Get the tank Token Exchange rate scaled by 1e18 */
     function exchangeRateCurrent() public returns (uint256) {
         uint256 supply = totalSupply();
-        uint256 mantissa = 18 - ERC20Upgradeable(token).decimals();
-        uint256 balance = MarketController.balanceOfUnderlying(cToken) * (10**mantissa);
+        uint256 mantissa = ERC20Upgradeable(token).decimals();
+
+        uint256 balance =
+            MarketController.balanceOfUnderlying(cToken).mul(1e18).div(10**mantissa);
 
         // The initial exchange rate should be 1:1\
         if (balance == 0 || supply == 0) return 1e18;
@@ -251,10 +253,12 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Get a user's balance in underlying tokens */
     function balanceOfUnderlying(address account) public returns (uint256) {
         uint256 balance = balanceOf(account);
-        uint256 mantissa = 36 - ERC20Upgradeable(token).decimals();
         uint256 exchangeRate = exchangeRateCurrent();
 
-        return balance.mul(exchangeRate).div(10**mantissa);
+        return
+            balance.mul(exchangeRate).mul(10**ERC20Upgradeable(token).decimals()).div(
+                1e36
+            );
     }
 
     /********************
