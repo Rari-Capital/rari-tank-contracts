@@ -64,6 +64,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev The address for the WETH contract */
     address internal WETH;
 
+    /** @dev Maps addresses to the block number of their last action */
+    mapping(address => uint256) internal lastAction;
+
     /** @dev Chainlink price feed for gas prices */
     AggregatorV3Interface constant FASTGAS =
         AggregatorV3Interface(0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C);
@@ -115,7 +118,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
      * Mofifiers *
      *************/
 
-    /** @dev  */
+    /** @dev Pay callers for calling a method  */
     modifier pay() {
         uint256 gas = gasleft();
         _;
@@ -135,11 +138,26 @@ contract Tank is TankStorage, ERC20Upgradeable {
         IERC20(token).safeTransfer(msg.sender, toPay);
     }
 
+    /** 
+        @dev Ensure that users don't call a method until a certain number of blocks have passed 
+        @param blocks The number of blocks that the call must 
+    */
+    modifier blockLock(uint256 blocks) {
+        require(
+            (lastAction[msg.sender] + blocks) <= block.number,
+            "Tank: Must call in a later block"
+        );
+        _;
+
+        lastAction[msg.sender] = block.number;
+    }
+
     /********************
      * External Functions *
      *********************/
     /** @dev Deposit into the Tank */
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount) external blockLock(300) {
+        //300 blocks is about one hour
         require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
 
         uint256 price = MarketController.getPriceEth(comptroller, token);
@@ -156,7 +174,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
     }
 
     /** @dev Deposit devs into the Tanks */
-    function withdraw(uint256 amount) external {
+    function withdraw(uint256 amount) external blockLock(300) {
+        // 300 blocks is about 1 hour
         require(msg.sender == tx.origin, "Tank: Can only be called by an EOA");
 
         uint256 balance = balanceOfUnderlying(msg.sender);
@@ -175,7 +194,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
         @dev Rebalance the Tank
         @param useWeth Use Weth when trading between ETH and     
     */
-    function rebalance(bool useWeth) external pay {
+    function rebalance(bool useWeth) external pay blockLock(100) {
+        // 100 blocks is about 20 mins
         require(msg.sender == tx.origin, "Tank: Can only be called by an EOA"); // Require that only a contract can call this
 
         (uint256 profit, bool profitSufficient) = getProfit(5e15); //0.5 percent
