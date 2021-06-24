@@ -15,12 +15,14 @@ library YieldSourceController {
     /** @dev The token symbol for DAI */
     string constant SYMBOL = "DAI";
 
+    address constant token = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
     /** @dev The address of the DAI Pool's Rari Fund Manager, an interface for handling deposits and withdrawals */
     IRariFundManager constant RARI_FUND_MANAGER =
         IRariFundManager(0xB465BAF04C087Ce3ed1C266F96CA43f4847D9635);
 
     /** @dev Deposit tokens into the yield source */
-    function deposit(address token, uint256 amount) internal {
+    function deposit(uint256 amount) internal {
         IERC20(token).approve(address(RARI_FUND_MANAGER), amount);
         RARI_FUND_MANAGER.deposit(SYMBOL, amount);
     }

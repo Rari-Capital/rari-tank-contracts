@@ -12,7 +12,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /**
     @title TankFactory
     @author Jet Jadeja <jet@rari.capital>
-    @dev Manages Tank deployments, new strategies, and rebalances
+    @dev Manages Tank deployments and the registration of new strategies
 */
 contract TankFactory is TankFactoryStorage, Ownable {
     /*************
@@ -30,14 +30,10 @@ contract TankFactory is TankFactoryStorage, Ownable {
      * External Functions *
      *********************/
     /** 
-        @dev Register a new implementaiton contract
+        @dev Register a new implementation contract
         @param implementation address of the implementation contract
     */
-    function newImplementation(address implementation)
-        external
-        canCall
-        returns (uint256)
-    {
+    function newImplementation(address implementation) external canCall {
         require(
             idByImplementation[implementation] == 0,
             "TankFactory: Implementation already exists"
@@ -64,11 +60,13 @@ contract TankFactory is TankFactoryStorage, Ownable {
             "TankFactory: Implementation does not exist"
         );
 
-        bytes32 salt = keccak256(abi.encodePacked(data, id));
+        bytes32 salt = keccak256(abi.encodePacked(id, data));
         TankDelegator tank = new TankDelegator{salt: salt}(id, data);
 
-        emit NewTank(address(tank), data, id);
         tanks.push(address(tank));
+        idByTank[address(tank)] = id;
+
+        emit NewTank(address(tank), data, id);
     }
 
     /** @dev Modify the canCall variable, changing permissions for implementation registration  */
@@ -88,7 +86,7 @@ contract TankFactory is TankFactoryStorage, Ownable {
         );
 
         ownerByImplementation[id] = newOwner;
-        emit ImplementationOwnerTransfered(id, newOwner);
+        emit ImplementationOwnerTransferred(id, newOwner);
     }
 
     /** 
@@ -104,6 +102,11 @@ contract TankFactory is TankFactoryStorage, Ownable {
 
         implementationById[id] = implementation;
         emit ImplementationUpgraded(id, implementation);
+    }
+
+    /** @dev Given a tank, get its corresponding implementation address */
+    function getImplementation(address tank) external view returns (address) {
+        return implementationById[idByTank[tank]];
     }
 
     /** @return an array of all Tanks */

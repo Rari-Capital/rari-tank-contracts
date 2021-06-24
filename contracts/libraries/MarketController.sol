@@ -49,7 +49,7 @@ library MarketController {
         );
     }
 
-    /**  @dev Call the enterMarkets() function allowing you to start borrowing against your collateral */
+    /**  @dev Call the enterMarkets() function allowing the contract to start borrowing against its collateral */
     function enterMarkets(address cErc20, address comptroller) internal {
         address[] memory cTokens = new address[](1);
         cTokens[0] = cErc20;

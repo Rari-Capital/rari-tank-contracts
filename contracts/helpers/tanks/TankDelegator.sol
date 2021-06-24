@@ -14,8 +14,8 @@ contract TankDelegator is TankStorage {
      * Constructor *
      ***************/
     constructor(uint256 _implementationId, bytes memory data) {
-        implementationId = _implementationId;
         factory = msg.sender;
+        implementationId = _implementationId;
 
         address implementation =
             ITankFactory(msg.sender).implementationById(_implementationId);
@@ -31,9 +31,7 @@ contract TankDelegator is TankStorage {
         require(msg.value == 0, "RariTankDelegator: Cannot send funds to contract");
 
         //Retrieve implementation address from factory contract
-        address implementation =
-            ITankFactory(factory).implementationById(implementationId);
-
+        address implementation = ITankFactory(factory).getImplementation(address(this));
         (bool success, ) = implementation.delegatecall(msg.data);
 
         assembly {

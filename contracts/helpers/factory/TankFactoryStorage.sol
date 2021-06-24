@@ -11,13 +11,6 @@ import {AggregatorV3Interface} from "../../external/chainlink/AggregatorV3Interf
 */
 abstract contract TankFactoryStorage {
     /*************
-     * Constants *
-     *************/
-    IKeep3r internal constant KPR = IKeep3r(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
-    AggregatorV3Interface constant FASTGAS =
-        AggregatorV3Interface(0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C);
-
-    /*************
      * Variables *
      *************/
 
@@ -59,5 +52,5 @@ abstract contract TankFactoryStorage {
     event NewTank(address tank, bytes indexed input, uint256 indexed id);
 
     /** @dev Emitted when the owner of an implementation is updated */
-    event ImplementationOwnerTransfered(uint256 indexed id, address indexed newOwner);
+    event ImplementationOwnerTransferred(uint256 indexed id, address indexed newOwner);
 }

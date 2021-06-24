@@ -15,7 +15,7 @@ contract FactoryDelegator is TankFactoryStorage, Ownable {
     /*************
      * Variables *
      *************/
-    /** @dev The address of the tank implementation contract */
+    /** @dev The address of the factory implementation contract */
     address public implementation;
 
     /***************

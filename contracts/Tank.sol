@@ -50,10 +50,10 @@ contract Tank is TankStorage, ERC20Upgradeable {
     address public borrowing;
 
     /** @dev Address of the FusePool Comptroller contract */
-    address internal comptroller;
+    address public comptroller;
 
-    /** @dev A value representing the ideal (percentage) used borrow limit scaled by 1e18 */
-    uint256 internal idealUsedBorrowLimit;
+    /** @dev A value representing the ideal collateral utilization, scaled by 1e18 */
+    uint256 public idealCollateralUtilization;
 
     /** @dev Borrow balance, set whenever funds are borrowed or repaid */
     uint256 internal lastBorrowBalance;
@@ -102,7 +102,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         borrowing = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-        idealUsedBorrowLimit = 55e16; // 55%
+        idealCollateralUtilization = 55e16; // 55%
 
         string memory borrowSymbol = ERC20Upgradeable(borrowing).symbol();
         cToken = address(IComptroller(_comptroller).cTokensByUnderlying(_token));
@@ -237,7 +237,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /********************
      * Public Functions *
      ********************/
-    /** @dev Get the tank Token Exchange rate scaled by 1e18 */
+    /** @dev Get the Tank Token Exchange rate scaled by 1e18 */
     function exchangeRateCurrent() public returns (uint256) {
         uint256 supply = totalSupply();
         uint256 mantissa = ERC20Upgradeable(token).decimals();
@@ -376,7 +376,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         MarketController.borrow(comptroller, borrowing, borrowAmount);
         lastBorrowBalance += borrowAmount;
 
-        YieldSourceController.deposit(borrowing, borrowAmount);
+        YieldSourceController.deposit(borrowAmount);
         lastYieldSourceBalance += borrowAmount;
     }
 
@@ -398,7 +398,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         return
             MarketController
                 .getTokensFromUsd(comptroller, borrowing, usdBorrowAmount) // Convert the usd borrow amount to borrowed tokens
-                .mul(idealUsedBorrowLimit) // Multiply this value by the percentage ideal used borrow limit
+                .mul(idealCollateralUtilization) // Multiply this value by the ideal collateral utilization factor
                 .div(1e18);
     }
 }

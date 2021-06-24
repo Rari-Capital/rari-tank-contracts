@@ -11,9 +11,9 @@ interface ITankFactory {
         uint256
     ) external returns (address);
     function newImplementation(address) external returns (uint256);
-    function reblanace(address) external;
 
     function implementationById(uint256) external returns (address);
     function idByImplementation(address) external returns (uint256);
+    function getImplementation(address) external view returns (address);
 }
     
