@@ -138,7 +138,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         uint256 decimals = ERC20Upgradeable(token).decimals();
 
         uint256 price =
-            MarketController.getPriceEth(comptroller, token).div(1e18).mul(10**decimals);
+            MarketController.getPriceEth(comptroller, token).mul(10**decimals).div(1e18);
         (, int256 ethPrice, , , ) = MarketController.ETH_PRICEFEED.latestRoundData();
 
         uint256 fee = used.mul(uint256(ethPrice)); // The fee, paid by the caller, in ETH
