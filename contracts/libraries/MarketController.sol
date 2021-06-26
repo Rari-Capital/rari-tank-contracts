@@ -107,7 +107,7 @@ library MarketController {
         uint256 price = getPriceEth(comptroller, token);
         (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
 
-        return price.mul(uint256(ethPrice)).div(1e12);
+        return price.mul(uint256(ethPrice)).div(1e8);
     }
 
     /** @dev Get the price mantissa of an asset in ETH */
