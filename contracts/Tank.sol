@@ -139,9 +139,9 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         uint256 price =
             MarketController.getPriceEth(comptroller, token).mul(10**decimals).div(1e18);
-        (, int256 ethPrice, , , ) = MarketController.ETH_PRICEFEED.latestRoundData();
+        (, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
 
-        uint256 fee = used.mul(uint256(ethPrice)); // The fee, paid by the caller, in ETH
+        uint256 fee = used.mul(uint256(gasPrice)); // The fee, paid by the caller in ETH
         uint256 toPay = fee.mul(10**decimals).div(price); // Calculate the fee, paid by the caller, in tokens
 
         withdrawFunds(toPay); // Withdraw funds from Fuse
