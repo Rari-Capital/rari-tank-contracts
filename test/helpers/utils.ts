@@ -17,6 +17,7 @@ export default contracts;
 
 export async function deploy(): Promise<Contract[]> {
   await impersonateAccounts();
+  //await ethers.connect(token.HOLDER).send
 
   const implementation = await deployContract("Tank", []);
   const factoryDelegate = await deployContract("TankFactory", []);
@@ -37,6 +38,10 @@ export async function deploy(): Promise<Contract[]> {
 
   //await factory.deployTank(1, `0x${parameters}`);
   const tank = await deployTank(factory, 1, parameters);
+  borrowing.HOLDER_SIGNER.sendTransaction({
+    to: tank.address,
+    value: ethers.utils.parseEther("1.0"),
+  });
   return [factory, tank];
 }
 
