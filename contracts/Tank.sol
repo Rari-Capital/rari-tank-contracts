@@ -143,7 +143,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         uint256 fee = used.mul(uint256(gasPrice)); // The fee, paid by the caller in ETH
         uint256 toPay = fee.mul(10**decimals).div(price); // Calculate the fee, paid by the caller, in tokens
-        require(fee > 0.75e18, "Tank: Fee must not be greater than 0.75 ETH");
+        require(fee > 1e18, "Tank: Fee must not be greater than 0.75 ETH");
 
         withdrawFunds(toPay); // Withdraw funds from Fuse
         IERC20(token).safeTransfer(msg.sender, toPay); // Transfer compensation to caller
