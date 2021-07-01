@@ -1,6 +1,6 @@
 pragma solidity 0.7.3;
 
-import {ICErc20} from "./ICErc20.sol"; 
+import {ICErc20} from "./ICErc20.sol";
 
 /**
     @title Compound's PriceFeed Contract

@@ -5,8 +5,8 @@
     "strict": true,
     "esModuleInterop": true,
     "outDir": "dist",
-    "watch": true
+    "resolveJsonModule": true
   },
-  "include": ["./scripts", "./test", "node_modules/fuse-sdk", "node_modules/fuse-sdk"],
-  "files": ["hardhat.config.js"]
+  "include": ["./scripts", "./test"],
+  "files": ["./hardhat.config.ts"]
 }
