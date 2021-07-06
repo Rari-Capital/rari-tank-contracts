@@ -134,7 +134,7 @@ contract Tank is TankStorage, ERC20Upgradeable {
         uint256 price = MarketController.getPriceEth(comptroller, token).mul(10**decimals).div(1e18);
         (, int256 gasPrice, , , ) = FASTGAS.latestRoundData();
 
-        uint256 fee = used.mul(uint256(gasPrice)); // The fee, paid by the caller in ETH
+        uint256 fee = used.mul(uint256(gasPrice)); // Multiply the used gas by the gas fee to calculate the total fee
         require(fee < 1e18, "Tank: Fee must not be greater than 1 ETH"); // Limit the fee to 1 ETH
         uint256 toPay = fee.mul(10**decimals).div(price); // Calculate the fee, paid by the caller, in tokens
 
