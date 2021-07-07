@@ -351,19 +351,19 @@ contract Tank is TankStorage, ERC20Upgradeable {
     /** @dev Borrow a stable asset from Fuse and deposit it into the yield source */
     function borrow(uint256 borrowAmount) internal {
         MarketController.borrow(comptroller, borrowing, borrowAmount);
-        lastBorrowBalance += borrowAmount;
+        lastBorrowBalance = lastBorrowBalance.add(borrowAmount);
 
         YieldSourceController.deposit(borrowAmount);
-        lastYieldSourceBalance += borrowAmount;
+        lastYieldSourceBalance = lastYieldSourceBalance.add(borrowAmount);
     }
 
     /** @dev Withdraw a stable asset from the yield source and repay part of the loan */
     function repay(uint256 withdrawalAmount) internal {
         YieldSourceController.withdraw(withdrawalAmount);
-        lastYieldSourceBalance -= withdrawalAmount;
+        lastYieldSourceBalance = lastYieldSourceBalance.sub(withdrawalAmount);
 
         MarketController.repay(comptroller, borrowing, withdrawalAmount);
-        lastBorrowBalance -= (withdrawalAmount);
+        lastBorrowBalance = lastBorrowBalance.sub(withdrawalAmount);
     }
 
     /** @return the ideal borrow amount */
