@@ -2,7 +2,7 @@
  * Tests for Tank rebalances
  */
 
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import addresses from "./helpers/constants";
 import contracts, { impersonateAccount, advanceBlock } from "./helpers/utils";
 const [token, borrowing] = [addresses.TOKEN, addresses.BORROWING];
@@ -22,28 +22,24 @@ describe("Rebalances", async function () {
     [factory, tank] = await contracts; // Deploy contracts and get addresses
   });
 
-  describe("Correct function", async () => {
+  describe("Correctly function", async () => {
     it("Rebalances do not fail", async () => {
+      await hre.network.provider.send("evm_setNextBlockTimestamp", [1616915378]);
       await tank.rebalance(token.USE_WETH);
     });
 
     it("Rebalancers are paid", async () => {
       const rebalancer = (await ethers.getSigners())[0];
-      expect(
-        parseInt(await (await token.CONTRACT).balanceOf(rebalancer.address))
-      ).is.greaterThan(0);
+      expect(parseInt(await (await token.CONTRACT).balanceOf(rebalancer.address))).is.greaterThan(
+        0
+      );
     });
   });
 
   describe("External Interactions", async () => {
     it("Deposits into the Yield Source", async () => {
-      const yieldSourceToken = await ethers.getContractAt(
-        Erc20Abi,
-        addresses.RSPT
-      );
-      expect(
-        parseInt(await yieldSourceToken.balanceOf(tank.address))
-      ).is.greaterThan(0);
+      const yieldSourceToken = await ethers.getContractAt(Erc20Abi, addresses.RSPT);
+      expect(parseInt(await yieldSourceToken.balanceOf(tank.address))).is.greaterThan(0);
     });
 
     it("Earning DAI increases the exchangeRate and user balances", async () => {
@@ -56,9 +52,7 @@ describe("Rebalances", async function () {
       const balance = await tank.callStatic.balanceOfUnderlying(token.HOLDER);
       await tank.rebalance(token.USE_WETH);
       expect(parseInt(balance.toString())).is.lessThan(
-        parseInt(
-          (await tank.callStatic.balanceOfUnderlying(token.HOLDER)).toString()
-        )
+        parseInt((await tank.callStatic.balanceOfUnderlying(token.HOLDER)).toString())
       );
     });
   });
@@ -71,9 +65,7 @@ describe("Rebalances", async function () {
       const tankSigner = await ethers.provider.getSigner(tank.address);
       const cToken = await ethers.getContractAt(CErc20Abi, await tank.cToken());
 
-      const balance: BigNumber = await cToken.callStatic.balanceOfUnderlying(
-        tank.address
-      );
+      const balance: BigNumber = await cToken.callStatic.balanceOfUnderlying(tank.address);
 
       await cToken.connect(tankSigner).redeemUnderlying(balance.div(2));
 

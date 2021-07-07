@@ -21,14 +21,9 @@ export async function deploy(): Promise<Contract[]> {
 
   const implementation = await deployContract("Tank", []);
   const factoryDelegate = await deployContract("TankFactory", []);
-  const factoryDelegator = await deployContract("FactoryDelegator", [
-    factoryDelegate.address,
-  ]);
+  const factoryDelegator = await deployContract("FactoryDelegator", [factoryDelegate.address]);
 
-  const factory = await ethers.getContractAt(
-    FactoryAbi,
-    factoryDelegate.address
-  );
+  const factory = await ethers.getContractAt(FactoryAbi, factoryDelegate.address);
   await factory.newImplementation(implementation.address);
 
   const parameters = await encodeArgs(
@@ -45,10 +40,7 @@ export async function deploy(): Promise<Contract[]> {
   return [factory, tank];
 }
 
-export async function deployContract(
-  name: string,
-  args: any
-): Promise<Contract> {
+export async function deployContract(name: string, args: any): Promise<Contract> {
   const factory = await ethers.getContractFactory(name);
   const contract = await factory.deploy(...args);
   await contract.deployed();

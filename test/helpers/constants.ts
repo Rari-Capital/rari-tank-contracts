@@ -59,13 +59,8 @@ export default {
     AMOUNT: "1000000000000000000000000", //1 million
     ADDRESS: "0x6b175474e89094c44da98b954eedeac495271d0f",
     HOLDER: "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c",
-    HOLDER_SIGNER: ethers.provider.getSigner(
-      "0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c"
-    ),
-    CONTRACT: ethers.getContractAt(
-      Erc20Abi,
-      "0x6b175474e89094c44da98b954eedeac495271d0f"
-    ),
+    HOLDER_SIGNER: ethers.provider.getSigner("0x01Ec5e7e03e2835bB2d1aE8D2edDEd298780129c"),
+    CONTRACT: ethers.getContractAt(Erc20Abi, "0x6b175474e89094c44da98b954eedeac495271d0f"),
   },
 
   RSPT: "0x0833cfcb11A5ba89FbAF73a407831c98aD2D7648",
