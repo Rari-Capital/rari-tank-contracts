@@ -89,10 +89,10 @@ library MarketController {
 
     /** @dev Get price mantissa of an asset in USDC */
     function getPrice(address comptroller, address token) internal view returns (uint256) {
-        // Get price data
-        uint256 price = getPriceEth(comptroller, token);
-        (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
+        (, int256 ethPrice, , uint256 updatedAt, ) = ETH_PRICEFEED.latestRoundData();
+        require(updatedAt + 90 minutes > block.timestamp, "Tank: Returned price data is too stale");
 
+        uint256 price = getPriceEth(comptroller, token);
         return price.mul(uint256(ethPrice)).div(1e8);
     }
 
