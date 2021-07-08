@@ -22,6 +22,7 @@ contract FactoryDelegator is TankFactoryStorage, Ownable {
      * Constructor *
      ***************/
     constructor(address _implementation) Ownable() {
+        require(_implementation != address(0), "TankFactory: Implementation cannot be the zero address");
         implementation = _implementation;
     }
 
@@ -53,6 +54,7 @@ contract FactoryDelegator is TankFactoryStorage, Ownable {
      **********************/
     /** @dev Upgrade the proxy contract's implementation address */
     function upgradeProxy(address _implementation) external onlyOwner {
+        require(_implementation != address(0), "TankFactory: Implementation cannot be the zero address");
         implementation = _implementation;
     }
 }
