@@ -26,8 +26,7 @@ library MarketController {
      * Variables *
      *************/
 
-    AggregatorV3Interface constant ETH_PRICEFEED =
-        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+    AggregatorV3Interface constant ETH_PRICEFEED = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
 
     /********************
      * Internal Functions *
@@ -43,20 +42,14 @@ library MarketController {
 
     /** @dev Withdraw funds from the market */
     function withdraw(address cErc20, uint256 amount) internal {
-        require(
-            ICErc20(cErc20).redeemUnderlying(amount) == 0,
-            "Tank: Failed to withdraw funds from money market"
-        );
+        require(ICErc20(cErc20).redeemUnderlying(amount) == 0, "Tank: Failed to withdraw funds from money market");
     }
 
     /**  @dev Call the enterMarkets() function allowing the contract to start borrowing against its collateral */
     function enterMarkets(address cErc20, address comptroller) internal {
         address[] memory cTokens = new address[](1);
         cTokens[0] = cErc20;
-        require(
-            IComptroller(comptroller).enterMarkets(cTokens)[0] == 0,
-            "Tank: Failed to enter markets"
-        );
+        require(IComptroller(comptroller).enterMarkets(cTokens)[0] == 0, "Tank: Failed to enter markets");
     }
 
     /** 
@@ -90,32 +83,21 @@ library MarketController {
     }
 
     /** @return the contract's borrowing balance (accounts for interest accrued) */
-    function borrowBalanceCurrent(address comptroller, address token)
-        internal
-        returns (uint256)
-    {
+    function borrowBalanceCurrent(address comptroller, address token) internal returns (uint256) {
         return getCErc20Contract(comptroller, token).borrowBalanceCurrent(address(this));
     }
 
     /** @dev Get price mantissa of an asset in USDC */
-    function getPrice(address comptroller, address token)
-        internal
-        view
-        returns (uint256)
-    {
-        // Get price data
-        uint256 price = getPriceEth(comptroller, token);
-        (, int256 ethPrice, , , ) = ETH_PRICEFEED.latestRoundData();
+    function getPrice(address comptroller, address token) internal view returns (uint256) {
+        (, int256 ethPrice, , uint256 updatedAt, ) = ETH_PRICEFEED.latestRoundData();
+        require(updatedAt + 90 minutes > block.timestamp, "Tank: Returned price data is too stale");
 
+        uint256 price = getPriceEth(comptroller, token);
         return price.mul(uint256(ethPrice)).div(1e8);
     }
 
     /** @dev Get the price mantissa of an asset in ETH */
-    function getPriceEth(address comptroller, address token)
-        internal
-        view
-        returns (uint256)
-    {
+    function getPriceEth(address comptroller, address token) internal view returns (uint256) {
         IPriceFeed priceFeed = IComptroller(comptroller).oracle();
         return priceFeed.getUnderlyingPrice(getCErc20Contract(comptroller, token));
     }
@@ -151,11 +133,7 @@ library MarketController {
     }
 
     /** @return the address of the CErc20 contract given the Comptroller and underlying asset */
-    function getCErc20Contract(address comptroller, address underlying)
-        internal
-        view
-        returns (ICErc20)
-    {
+    function getCErc20Contract(address comptroller, address underlying) internal view returns (ICErc20) {
         return IComptroller(comptroller).cTokensByUnderlying(underlying);
     }
 }

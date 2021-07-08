@@ -21,8 +21,7 @@ contract TankFactory is TankFactoryStorage, Ownable {
 
     /** @dev Checks whether anyone can call a function based on the canDeploy state variable */
     modifier canCall() {
-        if (!canDeploy && msg.sender != owner())
-            revert("TankFactory: This function can only be called by the owner");
+        if (!canDeploy && msg.sender != owner()) revert("TankFactory: This function can only be called by the owner");
         _;
     }
 
@@ -34,10 +33,8 @@ contract TankFactory is TankFactoryStorage, Ownable {
         @param implementation address of the implementation contract
     */
     function newImplementation(address implementation) external canCall {
-        require(
-            idByImplementation[implementation] == 0,
-            "TankFactory: Implementation already exists"
-        );
+        require(idByImplementation[implementation] == 0, "TankFactory: Implementation already exists");
+        require(implementation != address(0), "TankFactory: Implementation cannot be the zero address");
 
         initialImplementations.push(implementation); // Push initial implementation address
         uint256 id = initialImplementations.length; // Calculate the implementation ID
@@ -55,10 +52,7 @@ contract TankFactory is TankFactoryStorage, Ownable {
         @param data A bytes parameter that is passed to the contract's constructor
     */
     function deployTank(uint256 id, bytes memory data) external returns (address) {
-        require(
-            implementationById[id] != address(0),
-            "TankFactory: Implementation does not exist"
-        );
+        require(implementationById[id] != address(0), "TankFactory: Implementation does not exist");
 
         bytes32 salt = keccak256(abi.encodePacked(id, data));
         TankDelegator tank = new TankDelegator{salt: salt}(id, data);
@@ -80,10 +74,8 @@ contract TankFactory is TankFactoryStorage, Ownable {
         @param newOwner the new implementation owner
     */
     function transferImplementationOwnership(uint256 id, address newOwner) external {
-        require(
-            ownerByImplementation[id] == msg.sender,
-            "TankFactory: Must be called by the implementation owner"
-        );
+        require(newOwner != address(0), "TankFactory: New owner cannot be the zero address");
+        require(ownerByImplementation[id] == msg.sender, "TankFactory: Must be called by the implementation owner");
 
         ownerByImplementation[id] = newOwner;
         emit ImplementationOwnerTransferred(id, newOwner);
@@ -95,10 +87,8 @@ contract TankFactory is TankFactoryStorage, Ownable {
         @param implementation The address of the new implementation contract
     */
     function upgradeImplementation(uint256 id, address implementation) external {
-        require(
-            ownerByImplementation[id] == msg.sender,
-            "TankFactory: Must be called by the implementation owner"
-        );
+        require(ownerByImplementation[id] == msg.sender, "TankFactory: Must be called by the implementation owner");
+        require(implementation != address(0), "TankFactory: Implementation cannot be the zero address");
 
         implementationById[id] = implementation;
         emit ImplementationUpgraded(id, implementation);

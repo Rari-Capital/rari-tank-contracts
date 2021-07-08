@@ -2,6 +2,7 @@
  * Tests for the TankFactory
  */
 
+import hre from "hardhat";
 import contracts, { deployTank, encodeArgs } from "./helpers/utils";
 import { Contract } from "@ethersproject/contracts";
 
@@ -19,6 +20,7 @@ describe("TankFactory", async function () {
   this.timeout(300000); // Set new timeout
 
   before(async () => {
+    await hre.network.provider.send("evm_setNextBlockTimestamp", [1616915362]);
     [factory, tank] = await contracts; // Deploy contracts and get addresses
 
     // Register Tank contract with hardhat-gas-tracker by calling a function using one of the default signers

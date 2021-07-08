@@ -149,9 +149,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
     */
     modifier blockLock(uint256 blocks) {
         require((lastAction[msg.sender] + blocks) <= block.number, "Tank: Must call in a later block");
-        _;
-
         lastAction[msg.sender] = block.number; // Set new last action
+        _;
     }
 
     /********************
@@ -302,11 +301,19 @@ contract Tank is TankStorage, ERC20Upgradeable {
 
         IERC20(borrowing).approve(router, amount);
 
+        uint256 price = MarketController.getPrice(comptroller, borrowing);
+        uint256 amountUsd = amount.mul(price).div(1e18);
+        uint256 minimum = MarketController.getTokensFromUsd(comptroller, token, amountUsd);
+
         // Swap tokens and return the output amount
         return
-            IUniswapV2Router02(router).swapExactTokensForTokens(amount, 0, path, address(this), block.timestamp)[
-                useWeth ? 2 : 1
-            ]; // The location of the output amount in the returned array is based on the useWeth arg
+            IUniswapV2Router02(router).swapExactTokensForTokens(
+                amount,
+                minimum.mul(9).div(10),
+                path,
+                address(this),
+                block.timestamp
+            )[useWeth ? 2 : 1]; // The location of the output amount in the returned array is based on the useWeth arg
     }
 
     /** 
