@@ -149,9 +149,8 @@ contract Tank is TankStorage, ERC20Upgradeable {
     */
     modifier blockLock(uint256 blocks) {
         require((lastAction[msg.sender] + blocks) <= block.number, "Tank: Must call in a later block");
-        _;
-
         lastAction[msg.sender] = block.number; // Set new last action
+        _;
     }
 
     /********************
